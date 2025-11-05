@@ -1,13 +1,14 @@
 import React, { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import Home from './tabs/home'
-import Media from './tabs/media'
-import Progress from './tabs/progress'
-import Setting from './tabs/setting'
+import Home from './tabs/Home'
+import Media from './tabs/Media'
+import Progress from './tabs/Progress'
+import Setting from './tabs/Setting'
 import Modal from './components/Modal'
 import LoginForm from './auth/LoginForm'
 import SignupForm from './auth/signup'
+import ForgotPassword from './auth/ForgotPassword'
 // @ts-ignore
 import { supabase } from './supabaseClient'
 // assets
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const [active, setActive] = useState<string>('home')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
+  const [showReset, setShowReset] = useState(false)
   const [pendingTab, setPendingTab] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState(false)
 
@@ -45,6 +47,15 @@ const App: React.FC = () => {
     })
     return () => {
       sub?.subscription?.unsubscribe?.()
+    }
+  }, [])
+
+  // Auto-open Reset modal if returning from a recovery link
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search)
+    const hs = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    if (qs.get('type') === 'recovery' || hs.get('type') === 'recovery') {
+      setShowReset(true)
     }
   }, [])
 
@@ -163,13 +174,32 @@ const App: React.FC = () => {
               >
                 Create account
               </button>
-          <a href="/reset-password" className="text-indigo-400">Forgot password?</a>
+          <button
+            type="button"
+            onClick={() => {
+              setShowLogin(false)
+              setShowReset(true)
+            }}
+            className="text-indigo-500 hover:text-indigo-400"
+          >
+            Forgot password?
+          </button>
         </div>
       </Modal>
 
           {/* Signup Modal */}
-          <Modal open={showSignup} onClose={() => setShowSignup(false)} title="Create your account" logoSrc={logoImg} bgSrc={bgImage}>
+          <Modal open={showSignup} onClose={() => setShowSignup(false)} title="Create your account" logoSrc={logoAlt} bgSrc={bgImage}>
             <SignupForm onSuccess={() => setShowSignup(false)} />
+          </Modal>
+
+          {/* Reset/Forgot Password Modal */}
+          <Modal open={showReset} onClose={() => setShowReset(false)} title="Reset Password" logoSrc={logoAlt} bgSrc={bgImage}>
+            <ForgotPassword
+              onBackToLogin={() => {
+                setShowReset(false)
+                setShowLogin(true)
+              }}
+            />
           </Modal>
     </div>
   )
