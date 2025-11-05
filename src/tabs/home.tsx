@@ -139,7 +139,7 @@ const Home: React.FC = () => {
     return { activeId: active?.id ?? null, nextId: next?.id ?? null, startInMins: minutesToNext };
   }, [sorted, nowMins, completedIds]);
 
-  // Auto ring alarms when time hits (within a 60s window) for un-done and not-yet-triggered routines
+  // Auto ring alarms when time hits (within a 5-minute window) for un-done and not-yet-triggered routines
   useEffect(() => {
     const now = nowMs;
     for (const r of sorted) {
@@ -147,7 +147,8 @@ const Home: React.FC = () => {
       if (triggeredIds.includes(r.id)) continue;
       if (!r.ringtone?.url) continue;
       const ts = toTodayMillis(r.hour, r.minute, r.period);
-      if (now >= ts && now < ts + 60_000) {
+      const GRACE = 5 * 60_000; // 5 minutes
+      if (now >= ts && now < ts + GRACE) {
         if (!audioRef.current) audioRef.current = new Audio();
         const a = audioRef.current;
         a.src = r.ringtone.url;
