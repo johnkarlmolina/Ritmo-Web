@@ -11,6 +11,7 @@ type Props = {
 }
 
 const TEAL = '#2D7778'
+const RED = '#EF4444'
 
 export type NewRoutine = {
   hour: number
@@ -35,6 +36,12 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
   const [ringtone, setRingtone] = useState<Ringtone | null>(null)
   const [ringtoneName, setRingtoneName] = useState<string>('')
   const [preset, setPreset] = useState<Preset | null>(null)
+  const [errors, setErrors] = useState({
+    name: false,
+    preset: false,
+    ringtone: false,
+    ringtoneName: false,
+  })
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -51,6 +58,24 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
   if (!open) return null
 
   const handleDone = () => {
+    const missing = {
+      name: !routineName.trim(),
+      preset: !preset,
+      ringtone: !ringtone,
+      ringtoneName: !ringtoneName.trim(),
+    }
+    setErrors(missing)
+
+    const missingLabels: string[] = []
+    if (missing.name) missingLabels.push('Routine name')
+    if (missing.preset) missingLabels.push('Routine preset')
+    if (missing.ringtoneName) missingLabels.push('Ringtone name')
+    if (missing.ringtone) missingLabels.push('Ringtone selection')
+
+    if (missingLabels.length > 0) {
+      window.alert('Please fill up: ' + missingLabels.join(', '))
+      return
+    }
     const payload: NewRoutine = {
       hour,
       minute,
@@ -148,7 +173,7 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
               type="text"
               placeholder="Routine name"
               className="w-full rounded-2xl border px-4 py-3 text-base outline-none focus:ring-2"
-              style={{ borderColor: TEAL + '55' }}
+              style={{ borderColor: errors.name ? RED : TEAL + '55' }}
               value={routineName}
               onChange={(e) => setRoutineName(e.target.value)}
             />
@@ -157,7 +182,7 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
               type="text"
               placeholder="Ringtone name"
               className="w-full rounded-2xl border px-4 py-3 text-base outline-none focus:ring-2"
-              style={{ borderColor: TEAL + '55' }}
+              style={{ borderColor: errors.ringtoneName ? RED : TEAL + '55' }}
               value={ringtoneName}
               onChange={(e) => setRingtoneName(e.target.value)}
             />
@@ -166,7 +191,7 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
               type="button"
               onClick={() => setShowRingtone(true)}
               className="w-full rounded-2xl border bg-white px-4 py-3 text-left flex items-center justify-between"
-              style={{ borderColor: TEAL + '55' }}
+              style={{ borderColor: (errors.preset || errors.ringtone) ? RED : TEAL + '55' }}
             >
               <span>{ringtone ? `Ringtone: ${ringtone.label}` : 'Ringtone'}</span>
               <FiChevronRight />
