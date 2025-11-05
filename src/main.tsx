@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [active, setActive] = useState<string>('home')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
+  const [pendingTab, setPendingTab] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState(false)
 
   useEffect(() => {
@@ -86,7 +87,15 @@ const App: React.FC = () => {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setActive(t.id)}
+                  onClick={() => {
+                    const needsAuth = t.id === 'progress' || t.id === 'setting'
+                    if (needsAuth && !isAuthed) {
+                      setPendingTab(t.id)
+                      setShowLogin(true)
+                      return
+                    }
+                    setActive(t.id)
+                  }}
                   className={`relative px-3 py-2 text-sm font-medium rounded-md transition-colors hover:bg-white/5 ${
                     isActive ? 'text-white' : 'text-white/70'
                   }`}
@@ -136,7 +145,13 @@ const App: React.FC = () => {
 
       {/* Login Modal */}
   <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoAlt} bgSrc={bgImage}>
-        <LoginForm onSuccess={() => setShowLogin(false)} />
+        <LoginForm onSuccess={() => {
+          setShowLogin(false)
+          if (pendingTab) {
+            setActive(pendingTab)
+            setPendingTab(null)
+          }
+        }} />
             <div className="mt-4 text-sm text-slate-700 flex items-center justify-between">
               <button
                 type="button"
