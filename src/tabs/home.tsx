@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal";
 import RoutineDetailModal from "../components/RoutineDetailModal";
 import { FiCheckCircle } from "react-icons/fi";
@@ -8,10 +8,15 @@ const Home: React.FC = () => {
   const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [nowMins, setNowMins] = useState<number>(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [triggeredIds, setTriggeredIds] = useState<string[]>([]);
 
   const LS_KEY = "ritmo.routines";
   const todayKey = new Date().toISOString().slice(0, 10);
   const LS_DONE_KEY = `ritmo.routines.done.${todayKey}`;
+  const LS_TRIG_KEY = `ritmo.routines.trig.${todayKey}`;
 
   useEffect(() => {
     try {
@@ -39,6 +44,31 @@ const Home: React.FC = () => {
     } catch {}
   }, [completedIds]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_TRIG_KEY);
+      if (raw) setTriggeredIds(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_TRIG_KEY, JSON.stringify(triggeredIds));
+    } catch {}
+  }, [triggeredIds]);
+
+  // Keep current time updated to drive active/next highlighting and auto alarms
+  useEffect(() => {
+    const compute = () => {
+      const d = new Date();
+      setNowMins(d.getHours() * 60 + d.getMinutes());
+      setNowMs(d.getTime());
+    };
+    compute();
+    const t = setInterval(compute, 5_000);
+    return () => clearInterval(t);
+  }, []);
+
   const addRoutine = (data: NewRoutine) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     setRoutines((prev) => [...prev, { ...data, id }]);
@@ -65,6 +95,71 @@ const Home: React.FC = () => {
     const mm = m.toString().padStart(2, '0');
     return `${h}:${mm} ${p}`;
   };
+
+  // Helpers for time-of-day math
+  const toMinutes = (h: number, m: number, p: 'AM' | 'PM') => {
+    let hh = h % 12;
+    if (p === 'PM') hh += 12;
+    return hh * 60 + m;
+  };
+
+  const toTodayMillis = (h: number, m: number, p: 'AM' | 'PM') => {
+    const d = new Date();
+    let hh = h % 12;
+    if (p === 'PM') hh += 12;
+    d.setHours(hh, m, 0, 0);
+    return d.getTime();
+  };
+
+  // Sort routines by their time of day
+  const sorted = useMemo(() => {
+    return [...routines].sort((a, b) => toMinutes(a.hour, a.minute, a.period) - toMinutes(b.hour, b.minute, b.period));
+  }, [routines]);
+
+  // Determine current (active) and the next upcoming routine. Skip ones already marked done.
+  const { activeId, nextId, startInMins } = useMemo(() => {
+    if (sorted.length === 0) return { activeId: null as string | null, nextId: null as string | null, startInMins: null as number | null };
+    const notDone = sorted.filter((r) => !completedIds.includes(r.id));
+    const now = nowMins;
+
+    // latest not-done whose time <= now
+    let active: (typeof sorted)[number] | null = null;
+    for (const r of notDone) {
+      const t = toMinutes(r.hour, r.minute, r.period);
+      if (t <= now && (!active || t > toMinutes(active.hour, active.minute, active.period))) {
+        active = r;
+      }
+    }
+    if (!active) active = notDone[0] ?? null; // if none in past, next up becomes active
+
+    const upcoming = sorted.filter((r) => toMinutes(r.hour, r.minute, r.period) > now);
+    const next = upcoming[0] ?? null;
+    const minutesToNext = next ? Math.max(0, toMinutes(next.hour, next.minute, next.period) - now) : null;
+
+    return { activeId: active?.id ?? null, nextId: next?.id ?? null, startInMins: minutesToNext };
+  }, [sorted, nowMins, completedIds]);
+
+  // Auto ring alarms when time hits (within a 60s window) for un-done and not-yet-triggered routines
+  useEffect(() => {
+    const now = nowMs;
+    for (const r of sorted) {
+      if (completedIds.includes(r.id)) continue;
+      if (triggeredIds.includes(r.id)) continue;
+      if (!r.ringtone?.url) continue;
+      const ts = toTodayMillis(r.hour, r.minute, r.period);
+      if (now >= ts && now < ts + 60_000) {
+        if (!audioRef.current) audioRef.current = new Audio();
+        const a = audioRef.current;
+        a.src = r.ringtone.url;
+        a.loop = false;
+        a.volume = 1.0;
+        a.play().catch(() => {
+          alert(`It's time for: ${r.name}`);
+        });
+        setTriggeredIds((prev) => [...prev, r.id]);
+      }
+    }
+  }, [nowMs, sorted, completedIds, triggeredIds]);
 
   return (
     <div className="text-white">
@@ -102,15 +197,29 @@ const Home: React.FC = () => {
           <p className="text-center text-slate-700 text-2xl">No routines yet. Tap + to add one.</p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
-            {routines.map((r) => (
+            {sorted.map((r) => {
+              const ms = toTodayMillis(r.hour, r.minute, r.period);
+              const diffMs = ms - nowMs;
+              const upcoming = diffMs > 0;
+              const mins = Math.ceil(diffMs / 60_000);
+              const hours = Math.floor(mins / 60);
+              const minsR = mins % 60;
+              const label = upcoming
+                ? hours > 0
+                  ? `in ${hours}h${minsR > 0 ? ` ${minsR}m` : ''}`
+                  : `in ${Math.max(mins, 1)}m`
+                : 'now';
+              return (
               <button
                 key={r.id}
                 onClick={() => setSelectedId(r.id)}
-                className={`relative rounded-2xl bg-white/90 text-left text-slate-900 p-3 shadow hover:shadow-lg transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${isDone(r.id) ? 'opacity-90' : ''}`}
+                className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-3 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
+                  r.id === activeId ? 'scale-[1.03] border-2 border-[#2D7778] shadow-xl' : 'hover:shadow-lg border border-transparent'
+                } ${isDone(r.id) ? 'opacity-90' : upcoming && r.id !== activeId ? '' : ''}`}
               >
-                <div className="w-full aspect-square rounded-xl bg-white flex items-center justify-center overflow-hidden">
+                <div className={`w-full aspect-square rounded-xl ${upcoming && r.id !== activeId ? 'bg-slate-300/50' : 'bg-white'} flex items-center justify-center overflow-hidden`}>
                   {r.preset?.url ? (
-                    <img src={r.preset.url} alt={r.preset.label} className="h-full w-full object-contain" />
+                    <img src={r.preset.url} alt={r.preset.label} className={`h-full w-full object-contain ${upcoming && r.id !== activeId ? 'grayscale' : ''}`} />
                   ) : (
                     <div className="text-3xl" role="img" aria-label="routine">🗓️</div>
                   )}
@@ -122,13 +231,27 @@ const Home: React.FC = () => {
                     <div className="text-xs text-slate-500 truncate">🔔 {r.ringtoneName}</div>
                   )}
                 </div>
+                {!isDone(r.id) && upcoming && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+                    <div className="rounded-full bg-[#2D7778]/90 text-white px-3 py-1 text-xs font-semibold shadow">
+                      {label}
+                    </div>
+                  </div>
+                )}
+                {r.id === nextId && startInMins !== null && startInMins >= 0 && (
+                  <div className="absolute inset-0 rounded-2xl flex items-center justify-center pointer-events-none z-10">
+                    <div className="rounded-full bg-[#2D7778]/90 text-white px-4 py-1.5 text-sm font-semibold shadow-md">
+                      {startInMins === 0 ? 'Starting now' : `Start in: ${startInMins} ${startInMins === 1 ? 'minute' : 'minutes'}`}
+                    </div>
+                  </div>
+                )}
                 {isDone(r.id) && (
                   <div className="absolute top-2 right-2 text-emerald-600">
                     <FiCheckCircle size={20} />
                   </div>
                 )}
               </button>
-            ))}
+            );})}
           </div>
         )}
       </div>
