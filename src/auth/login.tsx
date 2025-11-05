@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import tailwindcss from "@tailwindcss/vite";
 // supabaseClient.js is plain JS and doesn't ship types in this repo.
 // @ts-ignore
 import { supabase } from "../supabaseClient";
