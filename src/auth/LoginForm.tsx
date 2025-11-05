@@ -49,7 +49,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm text-white/90 mb-1">Email:</label>
+        <label className="block text-sm text-slate-800 mb-1">Email:</label>
         <input
           className="w-full px-4 py-3 rounded-2xl bg-white text-slate-900 placeholder-slate-400 border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
           type="email"
@@ -62,7 +62,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       </div>
 
       <div>
-        <label className="block text-sm text-white/90 mb-1">Password:</label>
+        <label className="block text-sm text-slate-800 mb-1">Password:</label>
         <div className="relative">
           <input
             className="w-full pr-12 px-4 py-3 rounded-2xl bg-white text-slate-900 placeholder-slate-400 border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
@@ -87,7 +87,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           </button>
         </div>
         <div className="mt-1 text-right">
-          <a href="/reset-password" className="text-xs text-white/80 hover:text-white">Forgot Password?</a>
+          <a href="/reset-password" className="text-xs text-slate-700 hover:text-slate-900">Forgot Password?</a>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       </div>
 
       <div className="pt-2">
-        <div className="text-center text-sm text-white/80">Or sign in with</div>
+        <div className="text-center text-sm text-slate-700">Or sign in with</div>
         <div className="mt-2 flex items-center justify-center">
           <button
             type="button"
@@ -123,7 +123,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </div>
       </div>
 
-      <p className="text-xs text-white/60 text-center">
+      <p className="text-xs text-slate-600 text-center">
         By continuing you agree to our <a className="text-indigo-400" href="#">Terms</a> and <a className="text-indigo-400" href="#">Privacy</a>.
       </p>
     </form>

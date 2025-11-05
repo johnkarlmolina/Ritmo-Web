@@ -131,9 +131,9 @@ const App: React.FC = () => {
       </footer>
 
       {/* Login Modal */}
-      <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoImg}>
+      <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoImg} bgSrc={bgImage}>
         <LoginForm onSuccess={() => setShowLogin(false)} />
-        <div className="mt-4 text-sm text-white/80 flex items-center justify-between">
+        <div className="mt-4 text-sm text-slate-700 flex items-center justify-between">
           <a href="/signup" className="text-indigo-400">Create account</a>
           <a href="/reset-password" className="text-indigo-400">Forgot password?</a>
         </div>

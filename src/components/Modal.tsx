@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
+
 export type ModalProps = {
   open: boolean
   onClose: () => void
   title?: string
   children: React.ReactNode
   logoSrc?: string
+  bgSrc?: string
 }
 
-const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc }) => {
+const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, bgSrc }) => {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -31,26 +33,32 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc }
       aria-modal="true"
       role="dialog"
     >
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur p-6 shadow-2xl">
-        {/* Close button in top-right */}
-        <button
-          aria-label="Close"
-          onClick={onClose}
-          className="absolute top-3 right-3 rounded p-1 text-white/70 hover:text-white hover:bg-white/10"
-        >
-          ✕
-        </button>
+      {/* Page backdrop to dim the site behind the modal */}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div
+        className="relative w-full max-w-md rounded-2xl overflow-hidden border border-slate-200 text-slate-900 shadow-2xl bg-center bg-cover bg-no-repeat"
+        style={bgSrc ? ({ backgroundImage: `url(${bgSrc})` } as React.CSSProperties) : undefined}
+      >
+        <div className="relative z-10 p-6">
+          {/* Close button in top-right */}
+          <button
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute top-3 right-3 rounded p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          >
+            ✕
+          </button>
 
-        {logoSrc ? (
-          <div className="mb-4 flex items-center justify-center">
-            <img src={logoSrc} alt="Logo" className="h-16 w-auto select-none" draggable={false} />
-          </div>
-        ) : null}
-        {title ? (
-          <h3 className="text-xl font-semibold mb-4 text-center">{title}</h3>
-        ) : null}
-        {children}
+          {logoSrc ? (
+            <div className="mb-4 flex items-center justify-center">
+              <img src={logoSrc} alt="Logo" className="h-16 w-auto select-none" draggable={false} />
+            </div>
+          ) : null}
+          {title ? (
+            <h3 className="text-xl font-semibold mb-4 text-center">{title}</h3>
+          ) : null}
+          {children}
+        </div>
       </div>
     </div>,
     document.body
