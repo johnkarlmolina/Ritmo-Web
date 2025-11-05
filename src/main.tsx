@@ -53,8 +53,15 @@ const App: React.FC = () => {
     }
   }, [])
 
-  // Auto-open Reset modal if returning from a recovery link
+  // Redirect /reset-password to root and show Reset modal. Also auto-open if returning from a recovery link
   useEffect(() => {
+    if (window.location.pathname === '/reset-password') {
+      // replace the URL so only http://localhost:5173 is shown
+      window.history.replaceState({}, '', '/')
+      setShowReset(true)
+      return
+    }
+
     const qs = new URLSearchParams(window.location.search)
     const hs = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     if (qs.get('type') === 'recovery' || hs.get('type') === 'recovery') {
@@ -171,7 +178,7 @@ const App: React.FC = () => {
             setActive(pendingTab)
             setPendingTab(null)
           }
-        }} onShowSignup={() => { setShowLogin(false); setShowSignup(true) }} />
+        }} onShowSignup={() => { setShowLogin(false); setShowSignup(true) }} onShowReset={() => { setShowLogin(false); setShowReset(true) }} />
             <div className="mt-4 text-sm text-slate-700 flex items-center justify-between">
               <button
                 type="button"

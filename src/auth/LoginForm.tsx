@@ -5,9 +5,10 @@ import { supabase } from '../supabaseClient'
 export type LoginFormProps = {
   onSuccess?: () => void
   onShowSignup?: () => void
+  onShowReset?: () => void
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowSignup }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowSignup, onShowReset }) => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -88,7 +89,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onShowSignup }) => {
           </button>
         </div>
         <div className="mt-1 text-right">
-          <a href="/reset-password" className="text-xs text-slate-700 hover:text-slate-900">Forgot Password?</a>
+          <button
+            type="button"
+            onClick={() => onShowReset?.()}
+            className="text-xs text-slate-700 hover:text-slate-900 underline"
+          >
+            Forgot Password?
+          </button>
         </div>
       </div>
 
