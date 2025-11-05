@@ -7,6 +7,7 @@ import Progress from './tabs/progress'
 import Setting from './tabs/setting'
 import Modal from './components/Modal'
 import LoginForm from './auth/LoginForm'
+import SignupForm from './auth/signup'
 // @ts-ignore
 import { supabase } from './supabaseClient'
 // assets
@@ -14,6 +15,8 @@ import { supabase } from './supabaseClient'
 import bgImage from './assets/Background.png'
 // @ts-ignore
 import logoImg from './assets/Logo.png'
+// @ts-ignore
+import logoAlt from './assets/Logo-1.png'
 
 const tabs = [
   { id: 'home', label: 'Home' },
@@ -25,6 +28,7 @@ const tabs = [
 const App: React.FC = () => {
   const [active, setActive] = useState<string>('home')
   const [showLogin, setShowLogin] = useState(false)
+  const [showSignup, setShowSignup] = useState(false)
   const [isAuthed, setIsAuthed] = useState(false)
 
   useEffect(() => {
@@ -33,7 +37,10 @@ const App: React.FC = () => {
     // Subscribe to auth changes
     const { data: sub } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setIsAuthed(!!session)
-      if (session) setShowLogin(false)
+      if (session) {
+        setShowLogin(false)
+        setShowSignup(false)
+      }
     })
     return () => {
       sub?.subscription?.unsubscribe?.()
@@ -71,10 +78,7 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-900/70 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded bg-gradient-to-br from-indigo-500 to-emerald-400" />
-            <div className="text-lg font-semibold tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-300">Ritmo</span>
-            </div>
+            <img src={logoAlt as string} alt="Ritmo" className="h-8 sm:h-9 w-auto select-none" draggable={false} />
           </div>
           <nav className="hidden sm:flex items-center gap-1">
             {tabs.map((t) => {
@@ -99,7 +103,7 @@ const App: React.FC = () => {
             {!isAuthed ? (
               <button
                 onClick={() => setShowLogin(true)}
-                className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium hover:bg-indigo-500"
+                className="inline-flex items-center gap-2 rounded bg-indigo-600 px-5 py-2 text-sm font-medium hover:bg-indigo-500"
               >
                 Log in
               </button>
@@ -131,13 +135,27 @@ const App: React.FC = () => {
       </footer>
 
       {/* Login Modal */}
-      <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoImg} bgSrc={bgImage}>
+  <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoAlt} bgSrc={bgImage}>
         <LoginForm onSuccess={() => setShowLogin(false)} />
-        <div className="mt-4 text-sm text-slate-700 flex items-center justify-between">
-          <a href="/signup" className="text-indigo-400">Create account</a>
+            <div className="mt-4 text-sm text-slate-700 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogin(false)
+                  setShowSignup(true)
+                }}
+                className="text-indigo-500 hover:text-indigo-400"
+              >
+                Create account
+              </button>
           <a href="/reset-password" className="text-indigo-400">Forgot password?</a>
         </div>
       </Modal>
+
+          {/* Signup Modal */}
+          <Modal open={showSignup} onClose={() => setShowSignup(false)} title="Create your account" logoSrc={logoImg} bgSrc={bgImage}>
+            <SignupForm onSuccess={() => setShowSignup(false)} />
+          </Modal>
     </div>
   )
 }
