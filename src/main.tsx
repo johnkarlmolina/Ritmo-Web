@@ -188,8 +188,18 @@ const App: React.FC = () => {
       </Modal>
 
           {/* Signup Modal */}
-          <Modal open={showSignup} onClose={() => setShowSignup(false)} title="Create your account" logoSrc={logoAlt} bgSrc={bgImage}>
-            <SignupForm onSuccess={() => setShowSignup(false)} />
+          <Modal
+            open={showSignup}
+            onClose={() => setShowSignup(false)}
+            title="Create your account"
+            logoSrc={logoAlt}
+            bgSrc={bgImage}
+            onBack={() => { setShowSignup(false); setShowLogin(true) }}
+          >
+            <SignupForm
+              onSuccess={() => setShowSignup(false)}
+              onBackToLogin={() => { setShowSignup(false); setShowLogin(true) }}
+            />
           </Modal>
 
           {/* Reset/Forgot Password Modal */}

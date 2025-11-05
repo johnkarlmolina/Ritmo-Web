@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 
 export type SignupFormProps = {
 	onSuccess?: () => void
+	onBackToLogin?: () => void
 }
 
 const SignupForm: React.FC<SignupFormProps> = ({ onSuccess }) => {

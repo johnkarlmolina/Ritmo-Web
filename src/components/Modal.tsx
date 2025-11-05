@@ -9,9 +9,10 @@ export type ModalProps = {
   children: React.ReactNode
   logoSrc?: string
   bgSrc?: string
+  onBack?: () => void
 }
 
-const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, bgSrc }) => {
+const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, bgSrc, onBack }) => {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -40,6 +41,16 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, 
         style={bgSrc ? ({ backgroundImage: `url(${bgSrc})` } as React.CSSProperties) : undefined}
       >
         <div className="relative z-10 p-6">
+          {/* Back button in top-left (optional) */}
+          {onBack ? (
+            <button
+              aria-label="Back"
+              onClick={onBack}
+              className="absolute top-3 left-3 rounded p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 inline-flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5"><path d="M15 18l-6-6 6-6" /></svg>
+            </button>
+          ) : null}
           {/* Close button in top-right */}
           <button
             aria-label="Close"
