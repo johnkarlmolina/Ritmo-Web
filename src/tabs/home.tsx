@@ -155,7 +155,9 @@ const Home: React.FC = () => {
         a.loop = false;
         a.volume = 1.0;
         a.play().catch(() => {
-          alert(`It's time for: ${r.name}`);
+          // Autoplay may be blocked by the browser; per request, do not show alerts.
+          // You can consider showing a non-intrusive in-app banner instead.
+          // console.debug("Autoplay blocked for routine:", r.name);
         });
         setTriggeredIds((prev) => [...prev, r.id]);
       }
