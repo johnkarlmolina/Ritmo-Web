@@ -1,68 +1,102 @@
-import React from "react";
-// @ts-ignore
-import { supabase } from "../supabaseClient";
+import React, { useEffect, useState } from "react";
+import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal";
+import RoutineDetailModal from "../components/RoutineDetailModal";
 
 const Home: React.FC = () => {
-  const handleSignOut = async () => {
+  const [open, setOpen] = useState(false);
+  const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const LS_KEY = "ritmo.routines";
+
+  useEffect(() => {
     try {
-      await supabase.auth.signOut();
-      // reload to let the main auth listener update UI
-      window.location.href = "/";
-    } catch (err) {
-      console.error("Sign out error", err);
-    }
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) setRoutines(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(routines));
+    } catch {}
+  }, [routines]);
+
+  const addRoutine = (data: NewRoutine) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setRoutines((prev) => [...prev, { ...data, id }]);
+  };
+
+  const selected = selectedId ? routines.find((r) => r.id === selectedId) ?? null : null;
+
+  const deleteRoutine = (id: string) => {
+    setRoutines((prev) => prev.filter((r) => r.id !== id));
+    setSelectedId(null);
+  };
+
+  const formatTime = (h: number, m: number, p: 'AM' | 'PM') => {
+    const mm = m.toString().padStart(2, '0');
+    return `${h}:${mm} ${p}`;
   };
 
   return (
     <div className="text-white">
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 shadow-xl">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-32 right-1/2 h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/2 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl" />
-        </div>
-        <div className="relative px-6 sm:px-12 py-14 sm:py-20">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
-              Track your rhythm with
-              <span className="block bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-emerald-300">
-                a clean, modern dashboard
-              </span>
-            </h1>
-            <p className="mt-4 text-base sm:text-lg text-white/70 max-w-2xl">
-              Organize media, monitor progress, and tweak settings—all in one place. Built fast with React and Tailwind.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <a href="#media" className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500">Explore Media</a>
-              <a href="#progress" className="inline-flex items-center gap-2 rounded-md bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20">View Progress</a>
-              <button onClick={handleSignOut} className="ml-auto inline-flex items-center gap-2 rounded-md border border-white/15 px-4 py-2 text-sm font-medium hover:bg-white/5">
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="py-8 flex items-center justify-center">
+        <button
+          onClick={() => setOpen(true)}
+          className="h-20 w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-4xl"
+          aria-label="Add Routine"
+        >
+          +
+        </button>
+      </div>
 
-      {/* Features */}
-      <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          {
-            title: "Media Library",
-            desc: "Collect and preview your tracks, videos, and more.",
-          },
-          {
-            title: "Progress Tracking",
-            desc: "Stay on top of your goals with simple insights.",
-          },
-          { title: "Customization", desc: "Adjust preferences to suit your flow." },
-        ].map((card) => (
-          <div key={card.title} className="rounded-xl border border-white/10 bg-slate-900/60 p-6 shadow">
-            <h3 className="text-lg font-semibold">{card.title}</h3>
-            <p className="mt-2 text-sm text-white/70">{card.desc}</p>
-            <div className="mt-4 h-24 rounded-lg bg-gradient-to-br from-white/5 to-transparent" />
+      {/* Routines grid */}
+      <div className="px-4 pb-10">
+        {routines.length === 0 ? (
+          <p className="text-center text-slate-700 text-2xl">No routines yet. Tap + to add one.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-4">
+            {routines.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setSelectedId(r.id)}
+                className="rounded-2xl bg-white/90 text-left text-slate-900 p-3 shadow hover:shadow-lg transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778]"
+              >
+                <div className="w-full aspect-square rounded-xl bg-white flex items-center justify-center overflow-hidden">
+                  {r.preset?.url ? (
+                    <img src={r.preset.url} alt={r.preset.label} className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="text-3xl" role="img" aria-label="routine">🗓️</div>
+                  )}
+                </div>
+                <div className="mt-2">
+                  <div className="font-semibold truncate">{r.name}</div>
+                  <div className="text-sm text-slate-600">{formatTime(r.hour, r.minute, r.period)}</div>
+                  {r.ringtoneName && (
+                    <div className="text-xs text-slate-500 truncate">🔔 {r.ringtoneName}</div>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
-        ))}
-      </section>
+        )}
+      </div>
+
+      <AddRoutineModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onDone={(payload) => {
+          addRoutine(payload);
+        }}
+      />
+
+      <RoutineDetailModal
+        open={!!selected}
+        onClose={() => setSelectedId(null)}
+        routine={selected as any}
+        onDelete={deleteRoutine}
+      />
     </div>
   );
 };

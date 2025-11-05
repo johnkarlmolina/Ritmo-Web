@@ -85,7 +85,7 @@ const App: React.FC = () => {
   }
   return (
     <div
-      className="min-h-screen text-white bg-slate-950 bg-cover bg-center bg-fixed"
+      className="min-h-[100svh] flex flex-col text-white bg-slate-950 bg-cover bg-center bg-fixed"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Header */}
@@ -149,10 +149,10 @@ const App: React.FC = () => {
       </header>
 
       {/* Main */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">{renderContent()}</main>
+  <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">{renderContent()}</main>
 
       {/* Footer */}
-      <footer className="mt-16 border-t border-white/10" style={{ backgroundColor: '#2D7778' }}>
+      <footer className="mt-0 border-t border-white/10 w-full" style={{ backgroundColor: '#2D7778' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-white/60 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>© <span>{new Date().getFullYear()}</span> Ritmo. All rights reserved.</div>
           <div className="flex items-center gap-4">
