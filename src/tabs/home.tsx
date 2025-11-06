@@ -215,7 +215,13 @@ const Home: React.FC = () => {
               return (
               <button
                 key={r.id}
-                onClick={() => { setJustCompletedName(r.name); setShowChoices(true); }}
+                onClick={() => {
+                  // Only show completion choices when routine is at time or already past
+                  if (!upcoming) {
+                    setJustCompletedName(r.name)
+                    setShowChoices(true)
+                  }
+                }}
                 className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-2.5 sm:p-3 md:p-4 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
                   r.id === activeId ? 'scale-[1.03] border-2 border-[#2D7778] shadow-xl' : 'hover:shadow-lg border border-transparent'
                 } ${isDone(r.id) ? 'opacity-90' : upcoming && r.id !== activeId ? '' : ''}`}
