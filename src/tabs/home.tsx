@@ -308,6 +308,10 @@ const Home: React.FC = () => {
                   // Only show completion choices when routine is at time or already past
                   if (!upcoming) {
                     setJustCompletedName(r.name)
+                    // Mark as completed
+                    if (!completedIds.includes(r.id)) {
+                      setCompletedIds((prev) => [...prev, r.id])
+                    }
                     setShowChoices(true)
                   }
                 }}
