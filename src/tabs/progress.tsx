@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 
 const Progress: React.FC = () => {
   const [childNickname, setChildNickname] = useState("");
+  const [hoveredStat, setHoveredStat] = useState<string | null>(null);
   
   // Sample data - in a real app, this would come from props or state
   const weekRange = "October 20, 2025 – October 26, 2025";
@@ -185,9 +186,17 @@ const Progress: React.FC = () => {
     doc.save(fileName);
   };
 
+  const onStatHover = (name: string | null) => {
+    setHoveredStat(name);
+    if (name) {
+      // You can replace this with analytics, tooltip, etc.
+      console.debug('[progress] hover stat:', name);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-teal-100 p-4 md:p-10 flex justify-center items-start">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 w-full max-w-5xl">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 w-full">
         {/* Header */}
         <h1 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-6 md:mb-8">
           Weekly Performance Summary
@@ -208,15 +217,33 @@ const Progress: React.FC = () => {
           </div>
 
           <div className="flex justify-around md:justify-end gap-3 md:gap-6">
-            <div className="bg-teal-200 text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32">
+            <div
+              className={`text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32 border transition transform duration-200 ${
+                hoveredStat === 'Total Task' ? 'border-teal-500 shadow-lg scale-[1.03] bg-teal-50' : 'border-teal-200 bg-transparent'
+              }`}
+              onMouseEnter={() => onStatHover('Total Task')}
+              onMouseLeave={() => onStatHover(null)}
+            >
               <p className="text-xs md:text-sm font-medium">Total Task</p>
               <p className="text-xl md:text-2xl font-bold">{totalTasks}</p>
             </div>
-            <div className="bg-teal-200 text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32">
+            <div
+              className={`text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32 border transition transform duration-200 ${
+                hoveredStat === 'Completed' ? 'border-teal-500 shadow-lg scale-[1.03] bg-teal-50' : 'border-teal-200 bg-transparent'
+              }`}
+              onMouseEnter={() => onStatHover('Completed')}
+              onMouseLeave={() => onStatHover(null)}
+            >
               <p className="text-xs md:text-sm font-medium">Completed</p>
               <p className="text-xl md:text-2xl font-bold">{completedTasks}</p>
             </div>
-            <div className="bg-teal-200 text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32">
+            <div
+              className={`text-gray-800 p-3 md:p-4 rounded-xl shadow text-center w-24 md:w-32 border transition transform duration-200 ${
+                hoveredStat === 'Rate' ? 'border-teal-500 shadow-lg scale-[1.03] bg-teal-50' : 'border-teal-200 bg-transparent'
+              }`}
+              onMouseEnter={() => onStatHover('Rate')}
+              onMouseLeave={() => onStatHover(null)}
+            >
               <p className="text-xs md:text-sm font-medium">Rate</p>
               <p className="text-xl md:text-2xl font-bold text-orange-500">
                 {completionRate}%
@@ -284,7 +311,7 @@ const Progress: React.FC = () => {
         <div className="flex justify-center mt-8 md:mt-10">
           <button 
             onClick={generatePDF}
-            className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-xl shadow-md text-sm md:text-base transition"
+            className="bg-[#2D7778] hover:bg-teal-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-xl shadow-md text-sm md:text-base transition"
           >
             Save as PDF
           </button>

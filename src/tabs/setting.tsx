@@ -6,6 +6,7 @@ const Setting: React.FC = () => {
   const [childNickname, setChildNickname] = useState("");
   const [email, setEmail] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
@@ -27,11 +28,7 @@ const Setting: React.FC = () => {
     }
   };
 
-  const handleLogout = async () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      await supabase.auth.signOut();
-    }
-  };
+  // Removed logout button; function no longer needed
 
   const handleParentalLock = () => {
     setShowModal(true);
@@ -41,27 +38,35 @@ const Setting: React.FC = () => {
     setShowModal(false);
   };
 
+  const onMenuHover = (name: string | null) => {
+    setHovered(name);
+    if (name) {
+      // Hook for analytics/tooltip/etc.
+      console.debug('[setting] hover:', name);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-teal-100 flex justify-center items-center p-4 md:p-10">
-      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-6 md:p-10 relative">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="w-full max-w-3xl mx-auto bg-white rounded-3xl shadow-xl p-6 md:p-10 relative">
         {/* Brand Header */}
         <div className="flex justify-left mb-6">
           <img
             src="/src/assets/Logo-1.png"
             alt="Ritmo Logo"
-            className="w-40 md:w-56"
+            className="w-40 md:w-40"
           />
         </div>
 
         {/* User Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="bg-white border-2 border-teal-200 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border-2 border-[#2D7778] rounded-2xl p-4 shadow-sm">
             <p className="text-gray-700 font-semibold mb-1">Child Nickname</p>
             <p className="text-lg font-bold text-teal-800">
               {childNickname || "—"}
             </p>
           </div>
-          <div className="bg-white border-2 border-teal-200 rounded-2xl p-4 shadow-sm">
+          <div className="bg-white border-2 border-[#2D7778] rounded-2xl p-4 shadow-sm">
             <p className="text-gray-700 font-semibold mb-1">Email</p>
             <p className="text-lg font-bold text-teal-800">{email || "—"}</p>
           </div>
@@ -71,37 +76,47 @@ const Setting: React.FC = () => {
         <div className="space-y-4">
           <button
             onClick={handleParentalLock}
-            className="w-full flex justify-between items-center bg-white border-2 border-teal-200 rounded-2xl px-6 py-4 shadow-sm hover:bg-teal-50 transition"
+            onMouseEnter={() => onMenuHover('Parental Lock')}
+            onMouseLeave={() => onMenuHover(null)}
+            className={`w-full flex justify-between items-center bg-white border-2 border-[#2D7778] rounded-2xl px-6 py-4 shadow-sm transition transform ${
+              hovered === 'Parental Lock' ? 'bg-teal-50 shadow-md scale-[1.01]' : 'hover:bg-teal-50'
+            }`}
           >
             <span className="font-semibold text-gray-700">Parental Lock</span>
-            <span className="text-gray-500">›</span>
+            <span className={`text-gray-500 transition-transform ${hovered === 'Parental Lock' ? 'translate-x-1' : ''}`}>›</span>
           </button>
 
-          <button className="w-full flex justify-between items-center bg-white border-2 border-teal-200 rounded-2xl px-6 py-4 shadow-sm hover:bg-teal-50 transition">
-            <span className="font-semibold text-gray-700">Instruction</span>
-            <span className="text-gray-500">›</span>
-          </button>
-
-          <button className="w-full flex justify-between items-center bg-white border-2 border-teal-200 rounded-2xl px-6 py-4 shadow-sm hover:bg-teal-50 transition">
-            <span className="font-semibold text-gray-700">
-              Terms and Conditions
-            </span>
-            <span className="text-gray-500">›</span>
-          </button>
-
-          <button className="w-full flex justify-between items-center bg-white border-2 border-teal-200 rounded-2xl px-6 py-4 shadow-sm hover:bg-teal-50 transition">
-            <span className="font-semibold text-gray-700">Privacy Policy</span>
-            <span className="text-gray-500">›</span>
-          </button>
-        </div>
-
-        {/* Logout Button */}
-        <div className="mt-8">
           <button
-            onClick={handleLogout}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-2xl shadow-md border-2 border-red-600 transition"
+            onMouseEnter={() => onMenuHover('Instruction')}
+            onMouseLeave={() => onMenuHover(null)}
+            className={`w-full flex justify-between items-center bg-white border-2 border-[#2D7778] rounded-2xl px-6 py-4 shadow-sm transition transform ${
+              hovered === 'Instruction' ? 'bg-teal-50 shadow-md scale-[1.01]' : 'hover:bg-teal-50'
+            }`}
           >
-            Log out
+            <span className="font-semibold text-gray-700">Instruction</span>
+            <span className={`text-gray-500 transition-transform ${hovered === 'Instruction' ? 'translate-x-1' : ''}`}>›</span>
+          </button>
+
+          <button
+            onMouseEnter={() => onMenuHover('Terms and Conditions')}
+            onMouseLeave={() => onMenuHover(null)}
+            className={`w-full flex justify-between items-center bg-white border-2 border-[#2D7778] rounded-2xl px-6 py-4 shadow-sm transition transform ${
+              hovered === 'Terms and Conditions' ? 'bg-teal-50 shadow-md scale-[1.01]' : 'hover:bg-teal-50'
+            }`}
+          >
+            <span className="font-semibold text-gray-700">Terms and Conditions</span>
+            <span className={`text-gray-500 transition-transform ${hovered === 'Terms and Conditions' ? 'translate-x-1' : ''}`}>›</span>
+          </button>
+
+          <button
+            onMouseEnter={() => onMenuHover('Privacy Policy')}
+            onMouseLeave={() => onMenuHover(null)}
+            className={`w-full flex justify-between items-center bg-white border-2 border-[#2D7778] rounded-2xl px-6 py-4 shadow-sm transition transform ${
+              hovered === 'Privacy Policy' ? 'bg-teal-50 shadow-md scale-[1.01]' : 'hover:bg-teal-50'
+            }`}
+          >
+            <span className="font-semibold text-gray-700">Privacy Policy</span>
+            <span className={`text-gray-500 transition-transform ${hovered === 'Privacy Policy' ? 'translate-x-1' : ''}`}>›</span>
           </button>
         </div>
       </div>
