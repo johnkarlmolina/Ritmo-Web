@@ -12,7 +12,7 @@ import LoginForm from './auth/LoginForm'
 import SignupForm from './auth/Signup'
 import ForgotPassword from './auth/ForgotPassword'
 // icons
-import { FiHome, FiBarChart2, FiSettings } from 'react-icons/fi'
+import { FiHome, FiBarChart2, FiSettings, FiMenu, FiX } from 'react-icons/fi'
 import { FaPlayCircle } from 'react-icons/fa'
 // @ts-ignore
 import { supabase } from './supabaseClient'
@@ -45,6 +45,7 @@ const App: React.FC = () => {
   const [childNameDraft, setChildNameDraft] = useState('')
   const [showGreeting, setShowGreeting] = useState(false)
   const [hasGreetedLogin, setHasGreetedLogin] = useState(false)
+  const [showMobileNav, setShowMobileNav] = useState(false)
 
   const loadChildName = async () => {
     try {
@@ -195,7 +196,7 @@ const App: React.FC = () => {
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Header */}
-      <header className="sticky top-0 z-20" style={{ backgroundColor: '#2D7778' }}>
+      <header className="sticky top-0 z-30" style={{ backgroundColor: '#2D7778' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 grid grid-cols-[1fr_auto_1fr] items-center">
           <div className="flex items-center gap-2 justify-self-start">
             <img src={logoAlt as string} alt="Ritmo" className="h-8 sm:h-9 w-auto select-none" draggable={false} />
@@ -233,31 +234,76 @@ const App: React.FC = () => {
               )
             })}
           </nav>
-          <div className="flex items-center gap-3 min-w-0 justify-self-end">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 justify-self-end">
+            {/* Child name: hide on very small screens, show from sm+ with truncation */}
             {isAuthed && childName ? (
-              <div className="flex items-center gap-2 text-white/90 text-xs sm:text-sm min-w-0 max-w-[40vw] sm:max-w-xs">
+              <div className="hidden sm:flex items-center gap-2 text-white/90 text-xs sm:text-sm min-w-0 max-w-[40vw] sm:max-w-xs">
                 <span className="opacity-80 shrink-0">Child:</span>
                 <span className="font-semibold truncate" title={childName}>{childName}</span>
               </div>
             ) : null}
+            {/* Auth button */}
             {!isAuthed ? (
               <button
-                onClick={() => setShowLogin(true)}
-               className="inline-flex items-center gap-2 rounded bg-[#4FB89F] px-5 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#61CCB2]"
-
+                onClick={() => { setShowLogin(true); setShowMobileNav(false) }}
+               className="inline-flex items-center gap-2 rounded bg-[#4FB89F] px-3 sm:px-5 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#61CCB2]"
               >
                 Log in
               </button>
             ) : (
               <button
-                onClick={handleSignOut}
+                onClick={() => { handleSignOut(); setShowMobileNav(false) }}
                 className="inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-sm font-medium hover:bg-white/5"
               >
                 Sign out
               </button>
             )}
+            {/* Mobile menu toggle */}
+            <button
+              type="button"
+              onClick={() => setShowMobileNav(v => !v)}
+              className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/15 hover:bg-white/5 text-white"
+              aria-label={showMobileNav ? 'Close navigation' : 'Open navigation'}
+            >
+              {showMobileNav ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+        {/* Mobile dropdown nav */}
+        {showMobileNav ? (
+          <div className="sm:hidden border-t border-white/10" style={{ backgroundColor: '#2D7778' }}>
+            <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-4 gap-2">
+              {tabs.map((t) => {
+                const isActive = active === t.id
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      const needsAuth = t.id === 'progress' || t.id === 'setting'
+                      if (needsAuth && !isAuthed) {
+                        setPendingTab(t.id)
+                        setShowLogin(true)
+                        setShowMobileNav(false)
+                        return
+                      }
+                      setActive(t.id)
+                      setShowMobileNav(false)
+                    }}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 transition-colors ${isActive ? 'bg-white/10 text-white' : 'text-white/80 hover:bg-white/5'}`}
+                    aria-label={t.label}
+                    title={t.label}
+                  >
+                    {t.id === 'home' && <FiHome className="h-5 w-5" />}
+                    {t.id === 'media' && <FaPlayCircle className="h-5 w-5" />}
+                    {t.id === 'progress' && <FiBarChart2 className="h-5 w-5" />}
+                    {t.id === 'setting' && <FiSettings className="h-5 w-5" />}
+                    <span className="text-[11px] leading-none">{t.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
       </header>
 
       {/* Main */}
