@@ -53,8 +53,13 @@ const RoutinePresetModal: React.FC<Props> = ({ open, onClose, onSelect }) => {
       return { key, label, url }
     })
 
-    // Exclude BookGuide and Controller from routine presets
-    const filtered = items.filter((p) => !['bookguide', 'controller'].includes(p.key))
+    // Exclude BookGuide, Controller, and any Sun_* preview assets from routine presets
+    const filtered = items.filter((p) => {
+      if (['bookguide', 'controller'].includes(p.key)) return false
+      // Remove any asset whose key starts with 'sun' (e.g., sun_1_removebg_preview)
+      if (p.key.startsWith('sun')) return false
+      return true
+    })
 
     // Sort by label for predictable order
     filtered.sort((a, b) => a.label.localeCompare(b.label))
