@@ -1,14 +1,15 @@
+
 import React, { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import Home from './tabs/home'
-import Media from './tabs/media'
+import Home from './tabs/Home'
+import Media from './tabs/Media'
 import Progress from './tabs/progress'
-import Setting from './tabs/setting'
+import Setting from './tabs/Setting'
 import Modal from './components/Modal'
 import GreetingOverlay from './components/GreetingOverlay'
 import LoginForm from './auth/LoginForm'
-import SignupForm from './auth/signup'
+import SignupForm from './auth/Signup'
 import ForgotPassword from './auth/ForgotPassword'
 // icons
 import { FiHome, FiBarChart2, FiSettings } from 'react-icons/fi'
@@ -55,7 +56,14 @@ const App: React.FC = () => {
         const nickname = meta?.child_name ?? ''
         setChildName(nickname)
         setChildNameDraft(nickname)
-        if (!nickname) setShowChildName(true)
+        if (!nickname) {
+          setShowChildName(true)
+        } else if (!hasGreetedLogin) {
+          console.debug('[greet] loadChildName -> nickname found, greeting now')
+          // If a nickname exists and we haven't greeted yet this login, greet now
+          setShowGreeting(true)
+          setHasGreetedLogin(true)
+        }
       }
     } catch (e) {
       console.error('Error loading child name:', e)
@@ -71,6 +79,23 @@ const App: React.FC = () => {
       setUserId(uid)
       if (uid) {
         loadChildName()
+        // Show greeting once per login/initial load if a name exists in metadata
+        if (!hasGreetedLogin) {
+          supabase.auth.getUser().then((res: any) => {
+            const data = res?.data
+            const nickname = (data?.user?.user_metadata as any)?.child_name || ''
+            if (nickname.trim()) {
+              console.debug('[greet] initial session -> nickname found, greeting now')
+              // ensure state is in sync and greet
+              setChildName(nickname)
+              setChildNameDraft(nickname)
+              setShowGreeting(true)
+              setHasGreetedLogin(true)
+            } else {
+              console.debug('[greet] initial session -> no nickname yet')
+            }
+          }).catch(() => {})
+        }
       } else {
         setChildName('')
         setShowChildName(false)
@@ -79,6 +104,7 @@ const App: React.FC = () => {
     })
     // Subscribe to auth changes
     const { data: sub } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      console.debug('[auth] onAuthStateChange', { event, hasSession: !!session })
       setIsAuthed(!!session)
       if (session) {
         setShowLogin(false)
@@ -87,6 +113,21 @@ const App: React.FC = () => {
         setUserId(uid)
         if (uid) {
           loadChildName()
+          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !hasGreetedLogin) {
+            supabase.auth.getUser().then((res: any) => {
+              const data = res?.data
+              const nickname = (data?.user?.user_metadata as any)?.child_name || ''
+              if (nickname.trim()) {
+                console.debug('[greet] auth event ->', event, 'nickname found, greeting now')
+                setChildName(nickname)
+                setChildNameDraft(nickname)
+                setShowGreeting(true)
+                setHasGreetedLogin(true)
+              } else {
+                console.debug('[greet] auth event ->', event, 'no nickname yet')
+              }
+            }).catch(() => {})
+          }
         } else {
           setChildName('')
           setShowChildName(false)
@@ -101,7 +142,7 @@ const App: React.FC = () => {
     return () => {
       sub?.subscription?.unsubscribe?.()
     }
-  }, [])
+  }, [hasGreetedLogin])
 
   // Redirect /reset-password to root and show Reset modal. Also auto-open if returning from a recovery link
   useEffect(() => {
@@ -129,6 +170,7 @@ const App: React.FC = () => {
       setChildNameDraft('')
       setShowChildName(false)
       setHasGreetedLogin(false)
+      console.debug('[auth] signed out, reset greet flag')
     } catch (e) {
       console.error(e)
     }
@@ -192,6 +234,15 @@ const App: React.FC = () => {
             })}
           </nav>
           <div className="flex items-center gap-3">
+            {import.meta.env.DEV ? (
+              <button
+                onClick={() => setShowGreeting(true)}
+                className="hidden sm:inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-xs font-medium hover:bg-white/5"
+                title="Open Greeting (dev)"
+              >
+                Test Greeting
+              </button>
+            ) : null}
             {isAuthed && childName ? (
               <div className="flex items-center gap-2 text-white/90 text-xs sm:text-sm">
                 <span className="opacity-80">Child:</span>
@@ -317,6 +368,8 @@ const App: React.FC = () => {
                   }
                   setChildName(name)
                   setShowChildName(false)
+                  setShowGreeting(true)
+                  setHasGreetedLogin(true)
                 } catch (err) {
                   console.error('Unexpected error updating child name:', err)
                   window.alert('Failed to save nickname. Please try again.')
