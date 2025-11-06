@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 type MediaItem = {
 	id: string
@@ -68,8 +68,8 @@ const Media: React.FC = () => {
 				</div>
 			</form>
 
-			{/* 4 x 4 Grid */}
-			<div className="grid grid-cols-4 gap-4">
+					{/* Responsive Grid: 2 cols on small, 3 on md, 4 on lg+ */}
+					<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
 				{filtered.map((item) => (
 					<MediaCard
 						key={item.id}
@@ -92,6 +92,28 @@ const MediaCard: React.FC<{
 }> = ({ item, hovered, onHover, onLeave }) => {
 	const videoRef = useRef<HTMLVideoElement | null>(null)
 
+	// Revert to preview state when exiting fullscreen
+	useEffect(() => {
+		const onFsChange = () => {
+			const fsEl = (document as any).fullscreenElement || (document as any).webkitFullscreenElement || (document as any).msFullscreenElement
+			if (!fsEl && videoRef.current) {
+				const v = videoRef.current
+				v.controls = false
+				v.muted = true
+				v.pause()
+				v.currentTime = 0
+			}
+		}
+		document.addEventListener('fullscreenchange', onFsChange)
+		document.addEventListener('webkitfullscreenchange', onFsChange as any)
+		document.addEventListener('msfullscreenchange', onFsChange as any)
+		return () => {
+			document.removeEventListener('fullscreenchange', onFsChange)
+			document.removeEventListener('webkitfullscreenchange', onFsChange as any)
+			document.removeEventListener('msfullscreenchange', onFsChange as any)
+		}
+	}, [])
+
 	// Autoplay preview on hover, pause on leave
 	const handleEnter = () => {
 		onHover()
@@ -111,11 +133,25 @@ const MediaCard: React.FC<{
 		}
 	}
 
+		const handleClick = () => {
+			const v = videoRef.current
+			if (!v) return
+			// Ensure sound + controls in fullscreen
+			v.muted = false
+			v.controls = true
+			v.play().catch(() => {})
+			const rfs = (v as any).requestFullscreen || (v as any).webkitRequestFullscreen || (v as any).msRequestFullscreen
+			if (rfs) {
+				rfs.call(v)
+			}
+		}
+
 	return (
-		<div
-			className="group rounded-2xl overflow-hidden bg-white/10 border border-white/10 shadow hover:shadow-lg transition-shadow"
+			<div
+				className="group rounded-2xl overflow-hidden bg-white/10 border border-white/10 shadow hover:shadow-lg transition-shadow cursor-pointer"
 			onMouseEnter={handleEnter}
 			onMouseLeave={handleOut}
+				onClick={handleClick}
 		>
 			{/* Video container */}
 			<div className="relative aspect-video bg-black/70">
