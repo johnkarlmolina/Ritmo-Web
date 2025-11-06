@@ -200,7 +200,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2">
             <img src={logoAlt as string} alt="Ritmo" className="h-8 sm:h-9 w-auto select-none" draggable={false} />
           </div>
-          <nav className="hidden sm:flex items-center gap-5">
+          <nav className="hidden sm:flex items-center gap-5 shrink-0">
             {tabs.map((t) => {
               const isActive = active === t.id
               return (
@@ -233,20 +233,11 @@ const App: React.FC = () => {
               )
             })}
           </nav>
-          <div className="flex items-center gap-3">
-            {import.meta.env.DEV ? (
-              <button
-                onClick={() => setShowGreeting(true)}
-                className="hidden sm:inline-flex items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-xs font-medium hover:bg-white/5"
-                title="Open Greeting (dev)"
-              >
-                Test Greeting
-              </button>
-            ) : null}
+          <div className="flex items-center gap-3 min-w-0">
             {isAuthed && childName ? (
-              <div className="flex items-center gap-2 text-white/90 text-xs sm:text-sm">
-                <span className="opacity-80">Child:</span>
-                <span className="font-semibold">{childName}</span>
+              <div className="flex items-center gap-2 text-white/90 text-xs sm:text-sm min-w-0 max-w-[40vw] sm:max-w-xs">
+                <span className="opacity-80 shrink-0">Child:</span>
+                <span className="font-semibold truncate" title={childName}>{childName}</span>
               </div>
             ) : null}
             {!isAuthed ? (
