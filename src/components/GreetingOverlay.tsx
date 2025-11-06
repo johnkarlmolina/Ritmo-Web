@@ -116,12 +116,14 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
           >
             Good Morning
           </div>
-          <div
-            className="mt-2 text-3xl sm:text-4xl font-bold underline decoration-2 decoration-slate-700 transition-transform duration-200 hover:scale-110 active:scale-95"
-            style={{ animation: 'text-pop 650ms ease-out both' }}
-          >
-            {name}
-          </div>
+          {name?.trim() ? (
+            <div
+              className="mt-2 text-3xl sm:text-4xl font-bold underline decoration-2 decoration-slate-700 transition-transform duration-200 hover:scale-110 active:scale-95"
+              style={{ animation: 'text-pop 650ms ease-out both' }}
+            >
+              {name}
+            </div>
+          ) : null}
         </div>
 
         {/* Auto-closes after 3 seconds; no manual Continue button */}
