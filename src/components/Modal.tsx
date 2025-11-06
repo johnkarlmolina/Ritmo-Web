@@ -62,7 +62,7 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, 
 
           {logoSrc ? (
             <div className="mb-4 flex items-center justify-center">
-              <img src={logoSrc} alt="Logo" className="h-16 w-auto select-none" draggable={false} />
+              <img src={logoSrc} alt="Logo" className="h-30 w-auto select-none" draggable={false} />
             </div>
           ) : null}
           {title ? (

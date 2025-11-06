@@ -170,8 +170,8 @@ const App: React.FC = () => {
         </div>
       </footer>
 
-      {/* Login Modal */}
-  <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoAlt} bgSrc={bgImage}>
+    {/* Login Modal */}
+  <Modal open={showLogin} onClose={() => setShowLogin(false)} title="Sign in to Ritmo" logoSrc={logoImg} bgSrc={bgImage}>
         <LoginForm onSuccess={() => {
           setShowLogin(false)
           if (pendingTab) {
@@ -208,7 +208,7 @@ const App: React.FC = () => {
             open={showSignup}
             onClose={() => setShowSignup(false)}
             title="Create your account"
-            logoSrc={logoAlt}
+            logoSrc={logoImg}
             bgSrc={bgImage}
             onBack={() => { setShowSignup(false); setShowLogin(true) }}
           >
@@ -219,7 +219,7 @@ const App: React.FC = () => {
           </Modal>
 
           {/* Reset/Forgot Password Modal */}
-          <Modal open={showReset} onClose={() => setShowReset(false)} title="Reset Password" logoSrc={logoAlt} bgSrc={bgImage}>
+          <Modal open={showReset} onClose={() => setShowReset(false)} title="Reset Password" logoSrc={logoImg} bgSrc={bgImage}>
             <ForgotPassword
               onBackToLogin={() => {
                 setShowReset(false)

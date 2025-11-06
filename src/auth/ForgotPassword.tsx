@@ -171,7 +171,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBackToLogin }) => {
 	// Step 1: Request reset link
 	return (
 		<div>
-			<h2 className="text-center text-2xl font-semibold text-slate-900 mb-2">Reset Password</h2>
+		
 			<p className="text-center text-slate-700 mb-6">
 				Enter your email address and we’ll send you a link to reset your password.
 			</p>
