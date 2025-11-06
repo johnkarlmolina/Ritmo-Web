@@ -69,7 +69,7 @@ const CompletionChoicesModal: React.FC<Props> = ({ open, onClose, routineName, o
               <div className="text-center text-slate-800">
                 <div className="text-lg sm:text-xl font-semibold">Play Book Guide</div>
               </div>
-            </button>
+            </button>   
           </div>
         </div>
       </div>
