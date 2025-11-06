@@ -10,9 +10,10 @@ export type ModalProps = {
   logoSrc?: string
   bgSrc?: string
   onBack?: () => void
+  closable?: boolean
 }
 
-const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, bgSrc, onBack }) => {
+const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, bgSrc, onBack, closable = true }) => {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -34,8 +35,8 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, 
       aria-modal="true"
       role="dialog"
     >
-      {/* Page backdrop to dim the site behind the modal */}
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+  {/* Page backdrop to dim the site behind the modal */}
+  <div className="absolute inset-0 bg-black/60" onClick={closable ? onClose : undefined} />
       <div
         className="relative w-full max-w-md rounded-2xl overflow-hidden border border-slate-200 text-slate-900 shadow-2xl bg-center bg-cover bg-no-repeat"
         style={bgSrc ? ({ backgroundImage: `url(${bgSrc})` } as React.CSSProperties) : undefined}
@@ -52,13 +53,15 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, logoSrc, 
             </button>
           ) : null}
           {/* Close button in top-right */}
-          <button
-            aria-label="Close"
-            onClick={onClose}
-            className="absolute top-3 right-3 rounded p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          >
-            ✕
-          </button>
+          {closable ? (
+            <button
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute top-3 right-3 rounded p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            >
+              ✕
+            </button>
+          ) : null}
 
           {logoSrc ? (
             <div className="mb-4 flex items-center justify-center">

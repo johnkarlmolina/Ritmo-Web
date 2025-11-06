@@ -36,16 +36,50 @@ const App: React.FC = () => {
   const [showReset, setShowReset] = useState(false)
   const [pendingTab, setPendingTab] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState(false)
+  // Child name capture & display
+  const [userId, setUserId] = useState<string | null>(null)
+  const [childName, setChildName] = useState<string>('')
+  const [showChildName, setShowChildName] = useState(false)
+  const [childNameDraft, setChildNameDraft] = useState('')
+
+  const childKey = (uid: string) => `ritmo:childName:${uid}`
+  const loadChildName = (uid: string) => {
+    try {
+      const saved = localStorage.getItem(childKey(uid)) || ''
+      setChildName(saved)
+      setChildNameDraft(saved)
+      if (!saved) setShowChildName(true)
+    } catch (e) {
+      // ignore storage errors
+    }
+  }
 
   useEffect(() => {
     // Initialize current session state
-    supabase.auth.getSession().then((res: any) => setIsAuthed(!!res?.data?.session))
+    supabase.auth.getSession().then((res: any) => {
+      const session = res?.data?.session
+      setIsAuthed(!!session)
+      const uid = session?.user?.id ?? null
+      setUserId(uid)
+      if (uid) {
+        loadChildName(uid)
+      } else {
+        setChildName('')
+        setShowChildName(false)
+        setChildNameDraft('')
+      }
+    })
     // Subscribe to auth changes
     const { data: sub } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setIsAuthed(!!session)
       if (session) {
         setShowLogin(false)
         setShowSignup(false)
+        const uid = session?.user?.id ?? null
+        setUserId(uid)
+        if (uid) {
+          loadChildName(uid)
+        }
       }
     })
     return () => {
@@ -72,6 +106,12 @@ const App: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut()
+      // Immediately reflect signed-out state in UI even before the auth listener fires
+      setIsAuthed(false)
+      setUserId(null)
+      setChildName('')
+      setChildNameDraft('')
+      setShowChildName(false)
     } catch (e) {
       console.error(e)
     }
@@ -134,7 +174,13 @@ const App: React.FC = () => {
               )
             })}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {isAuthed && childName ? (
+              <div className="flex items-center gap-2 text-white/90 text-xs sm:text-sm">
+                <span className="opacity-80">Child:</span>
+                <span className="font-semibold">{childName}</span>
+              </div>
+            ) : null}
             {!isAuthed ? (
               <button
                 onClick={() => setShowLogin(true)}
@@ -226,6 +272,50 @@ const App: React.FC = () => {
                 setShowLogin(true)
               }}
             />
+          </Modal>
+
+          {/* Child Name Capture Modal (non-dismissable) */}
+          <Modal
+            open={showChildName}
+            onClose={() => { /* non-dismissable until saved */ }}
+            title="Set child's nickname"
+            logoSrc={logoImg}
+            bgSrc={bgImage}
+            closable={false}
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const name = childNameDraft.trim()
+                if (!name || !userId) return
+                try {
+                  localStorage.setItem(childKey(userId), name)
+                } catch {}
+                setChildName(name)
+                setShowChildName(false)
+              }}
+              className="space-y-5"
+            >
+              <div>
+                <label className="block text-sm text-slate-800 mb-2">Set child's nickname</label>
+                <input
+                  className="w-full px-4 py-3 rounded-2xl bg-white text-slate-900 placeholder-slate-400 border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400"
+                  type="text"
+                  value={childNameDraft}
+                  onChange={(e) => setChildNameDraft(e.target.value)}
+                  placeholder="Enter child's nickname here"
+                  maxLength={40}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-3 px-4 rounded-full bg-teal-700 hover:bg-teal-600 text-white font-semibold shadow disabled:opacity-60"
+                disabled={!userId}
+              >
+                SAVE
+              </button>
+            </form>
           </Modal>
     </div>
   )
