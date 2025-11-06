@@ -13,7 +13,7 @@ type Props = {
   onToggleDone?: (id: string) => void
 }
 
-const RoutineDetailModal: React.FC<Props> = ({ open, onClose, routine, onDelete, completed, onToggleDone }) => {
+const RoutineDetailModal: React.FC<Props> = ({ open, onClose, routine, onDelete }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [isPlaying, setPlaying] = useState(false)
 
@@ -90,7 +90,7 @@ const RoutineDetailModal: React.FC<Props> = ({ open, onClose, routine, onDelete,
             )}
           </div>
 
-          <div className="flex gap-3 pt-2 flex-wrap">
+          <div className="flex gap-2 sm:gap-3 pt-2 flex-wrap">
             <button
               type="button"
               onClick={togglePlay}
@@ -99,15 +99,6 @@ const RoutineDetailModal: React.FC<Props> = ({ open, onClose, routine, onDelete,
             >
               {isPlaying ? 'Stop Ringtone' : 'Play Ringtone'}
             </button>
-            {onToggleDone && routine?.id && (
-              <button
-                type="button"
-                onClick={() => onToggleDone(routine.id)}
-                className={`rounded-xl px-4 py-3 font-medium border ${completed ? 'text-slate-700 bg-slate-100 border-slate-300' : 'text-emerald-700 bg-emerald-50 border-emerald-300'}`}
-              >
-                {completed ? 'Mark as Undone' : 'Mark as Done'}
-              </button>
-            )}
             {onDelete && (
               <button
                 type="button"

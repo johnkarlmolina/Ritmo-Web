@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal";
 import RoutineDetailModal from "../components/RoutineDetailModal";
+import CompletionChoicesModal from "../components/CompletionChoicesModal";
 import { FiCheckCircle } from "react-icons/fi";
 
 const Home: React.FC = () => {
@@ -12,6 +13,8 @@ const Home: React.FC = () => {
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [triggeredIds, setTriggeredIds] = useState<string[]>([]);
+  const [showChoices, setShowChoices] = useState(false);
+  const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
 
   const LS_KEY = "ritmo.routines";
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -82,9 +85,6 @@ const Home: React.FC = () => {
   };
 
   const isDone = (id: string) => completedIds.includes(id);
-  const toggleDone = (id: string) => {
-    setCompletedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
 
   const doneCount = useMemo(() => routines.reduce((acc, r) => acc + (completedIds.includes(r.id) ? 1 : 0), 0), [routines, completedIds]);
   const totalCount = routines.length;
@@ -184,10 +184,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      <div className="py-6 flex items-center justify-center">
+      <div className="py-4 sm:py-6 flex items-center justify-center">
         <button
           onClick={() => setOpen(true)}
-          className="h-20 w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-4xl"
+          className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-3xl sm:text-4xl"
           aria-label="Add Routine"
         >
           +
@@ -199,7 +199,7 @@ const Home: React.FC = () => {
         {routines.length === 0 ? (
           <p className="text-center text-slate-700 text-2xl">No routines yet. Tap + to add one.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {sorted.map((r) => {
               const ms = toTodayMillis(r.hour, r.minute, r.period);
               const diffMs = ms - nowMs;
@@ -215,8 +215,8 @@ const Home: React.FC = () => {
               return (
               <button
                 key={r.id}
-                onClick={() => setSelectedId(r.id)}
-                className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-3 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
+                onClick={() => { setJustCompletedName(r.name); setShowChoices(true); }}
+                className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-2.5 sm:p-3 md:p-4 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
                   r.id === activeId ? 'scale-[1.03] border-2 border-[#2D7778] shadow-xl' : 'hover:shadow-lg border border-transparent'
                 } ${isDone(r.id) ? 'opacity-90' : upcoming && r.id !== activeId ? '' : ''}`}
               >
@@ -228,22 +228,22 @@ const Home: React.FC = () => {
                   )}
                 </div>
                 <div className="mt-2">
-                  <div className="font-semibold truncate">{r.name}</div>
-                  <div className="text-sm text-slate-600">{formatTime(r.hour, r.minute, r.period)}</div>
+                  <div className="font-semibold truncate text-sm sm:text-base">{r.name}</div>
+                  <div className="text-xs sm:text-sm text-slate-600">{formatTime(r.hour, r.minute, r.period)}</div>
                   {r.ringtoneName && (
-                    <div className="text-xs text-slate-500 truncate">🔔 {r.ringtoneName}</div>
+                    <div className="text-[11px] sm:text-xs text-slate-500 truncate">🔔 {r.ringtoneName}</div>
                   )}
                 </div>
                 {!isDone(r.id) && upcoming && (
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
-                    <div className="rounded-full bg-[#2D7778]/90 text-white px-3 py-1 text-xs font-semibold shadow">
+                    <div className="rounded-full bg-[#2D7778]/90 text-white px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold shadow">
                       {label}
                     </div>
                   </div>
                 )}
                 {r.id === nextId && startInMins !== null && startInMins >= 0 && (
                   <div className="absolute inset-0 rounded-2xl flex items-center justify-center pointer-events-none z-10">
-                    <div className="rounded-full bg-[#2D7778]/90 text-white px-4 py-1.5 text-sm font-semibold shadow-md">
+                    <div className="rounded-full bg-[#2D7778]/90 text-white px-3 sm:px-4 py-1 text-xs sm:text-sm font-semibold shadow-md">
                       {startInMins === 0 ? 'Starting now' : `Start in: ${startInMins} ${startInMins === 1 ? 'minute' : 'minutes'}`}
                     </div>
                   </div>
@@ -272,8 +272,14 @@ const Home: React.FC = () => {
         onClose={() => setSelectedId(null)}
         routine={selected as any}
         onDelete={deleteRoutine}
-        completed={selected ? isDone(selected.id) : false}
-        onToggleDone={(id) => toggleDone(id)}
+      />
+
+      <CompletionChoicesModal
+        open={showChoices}
+        onClose={() => setShowChoices(false)}
+        routineName={justCompletedName ?? undefined}
+        onChooseBookGuide={() => setShowChoices(false)}
+        onChooseMiniGame={() => setShowChoices(false)}
       />
     </div>
   );
