@@ -3,6 +3,8 @@ import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal"
 import RoutineDetailModal from "../components/RoutineDetailModal";
 import CompletionChoicesModal from "../components/CompletionChoicesModal";
 import { FiCheckCircle } from "react-icons/fi";
+// @ts-ignore - local JS client without types shipped here
+import { supabase } from '../supabaseClient'
 
 const Home: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -21,11 +23,51 @@ const Home: React.FC = () => {
   const LS_DONE_KEY = `ritmo.routines.done.${todayKey}`;
   const LS_TRIG_KEY = `ritmo.routines.trig.${todayKey}`;
 
+  // On mount: if user is signed in, load routines from DB for that user;
+  // otherwise fall back to localStorage. DB results are preferred when available.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) setRoutines(JSON.parse(raw));
-    } catch {}
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user ?? null;
+        if (user) {
+          const res = await supabase.from("routines").select("*").eq("routine_id", user.id);
+          const data = res?.data;
+          if (!cancelled && data && Array.isArray(data)) {
+            const mapped = data.map((row: any) => {
+              // description is expected to contain JSON blob of the routine details
+              let desc: any = {};
+              try {
+                desc = typeof row.description === 'string' ? JSON.parse(row.description) : row.description ?? {};
+              } catch (e) {
+                desc = row.description ?? {};
+              }
+              // Keep a stable id used by the app (prefix with db- to avoid collisions with local tmp ids)
+              return { ...(desc as NewRoutine), id: `db-${row.id}` };
+            });
+            setRoutines(mapped as any);
+            return;
+          }
+        }
+
+        // no signed-in user or DB fetch failed: fallback to localStorage
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+        } catch {}
+      } catch (err) {
+        // If anything goes wrong, fall back to localStorage (silent)
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+        } catch {}
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -72,9 +114,48 @@ const Home: React.FC = () => {
     return () => clearInterval(t);
   }, []);
 
-  const addRoutine = (data: NewRoutine) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    setRoutines((prev) => [...prev, { ...data, id }]);
+  const addRoutine = async (data: NewRoutine) => {
+    // create a temporary id so UI is responsive while we persist to DB
+    const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const newRoutine = { ...data, id: tempId };
+    setRoutines((prev) => [...prev, newRoutine]);
+
+    // attempt to persist to Supabase if user is signed in
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user ?? null;
+      if (!user) return; // not signed in; keep local-only
+
+      const timeStr = `${data.hour}:${String(data.minute).padStart(2, '0')} ${data.period}`;
+      const description = JSON.stringify(data);
+
+      const { data: inserted, error } = await supabase
+        .from("routines")
+        .insert([
+          {
+            routine_id: user.id,
+            name: data.name,
+            description,
+            is_active: true,
+            time: timeStr,
+          },
+        ])
+        .select();
+
+      if (error) {
+        console.error("Failed to save routine to DB:", error);
+        return;
+      }
+
+      if (inserted && inserted[0]) {
+        const row = inserted[0] as any;
+        const dbId = `db-${row.id}`;
+        // replace temporary id with db id so future loads map cleanly
+        setRoutines((prev) => prev.map((r) => (r.id === tempId ? { ...r, id: dbId } : r)));
+      }
+    } catch (err) {
+      console.error("Error saving routine:", err);
+    }
   };
 
   const selected = selectedId ? routines.find((r) => r.id === selectedId) ?? null : null;
