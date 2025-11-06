@@ -6,6 +6,7 @@ import Media from './tabs/Media'
 import Progress from './tabs/Progress'
 import Setting from './tabs/Setting'
 import Modal from './components/Modal'
+import GreetingOverlay from './components/GreetingOverlay'
 import LoginForm from './auth/LoginForm'
 import SignupForm from './auth/signup'
 import ForgotPassword from './auth/ForgotPassword'
@@ -41,6 +42,8 @@ const App: React.FC = () => {
   const [childName, setChildName] = useState<string>('')
   const [showChildName, setShowChildName] = useState(false)
   const [childNameDraft, setChildNameDraft] = useState('')
+  const [showGreeting, setShowGreeting] = useState(false)
+  const [hasGreetedLogin, setHasGreetedLogin] = useState(false)
 
   const childKey = (uid: string) => `ritmo:childName:${uid}`
   const loadChildName = (uid: string) => {
@@ -70,7 +73,7 @@ const App: React.FC = () => {
       }
     })
     // Subscribe to auth changes
-    const { data: sub } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       setIsAuthed(!!session)
       if (session) {
         setShowLogin(false)
@@ -79,6 +82,20 @@ const App: React.FC = () => {
         setUserId(uid)
         if (uid) {
           loadChildName(uid)
+          // If a child name already exists and this is a fresh sign-in, show greeting
+          if (event === 'SIGNED_IN' && !hasGreetedLogin) {
+            try {
+              const saved = localStorage.getItem(childKey(uid)) || ''
+              if (saved.trim()) {
+                setChildName(saved)
+                setChildNameDraft(saved)
+                setShowGreeting(true)
+                setHasGreetedLogin(true)
+              }
+            } catch {
+              // ignore storage errors
+            }
+          }
         }
       }
     })
@@ -112,6 +129,7 @@ const App: React.FC = () => {
       setChildName('')
       setChildNameDraft('')
       setShowChildName(false)
+      setHasGreetedLogin(false)
     } catch (e) {
       console.error(e)
     }
@@ -293,6 +311,8 @@ const App: React.FC = () => {
                 } catch {}
                 setChildName(name)
                 setShowChildName(false)
+                // Show greeting effect right after saving the name
+                setShowGreeting(true)
               }}
               className="space-y-5"
             >
@@ -317,6 +337,9 @@ const App: React.FC = () => {
               </button>
             </form>
           </Modal>
+
+          {/* Greeting Overlay */}
+          <GreetingOverlay open={showGreeting} name={childName} onClose={() => setShowGreeting(false)} />
     </div>
   )
 }
