@@ -33,10 +33,10 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
   const [idx, setIdx] = useState(0)
   const imgSrc = sunList[idx] ?? sunList[0]
 
-  // Auto-dismiss after 3 seconds when opened
+  // Auto-dismiss after 5 seconds when opened
   useEffect(() => {
     if (!open) return
-    const t = setTimeout(() => onClose(), 3000)
+    const t = setTimeout(() => onClose(), 5000)
     return () => clearTimeout(t)
   }, [open, onClose])
 
@@ -46,10 +46,9 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
     <div className="fixed inset-0 z-[60] bg-transparent">
       {/* Animations for entrance, falling suns, and subtle text pop */}
       <style>{`
-        @keyframes sun-enter {
-          0% { transform: translateY(-50vh) scale(0.8); opacity: 0; }
-          60% { transform: translateY(10px) scale(1.05); opacity: 1; }
-          80% { transform: translateY(-6px) scale(0.98); }
+        @keyframes sun-rise {
+          0% { transform: translateY(50vh) scale(0.9); opacity: 0; }
+          60% { opacity: 1; }
           100% { transform: translateY(0) scale(1); opacity: 1; }
         }
         @keyframes fall {
@@ -65,11 +64,11 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
 
       {/* Falling suns decoration */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {Array.from({ length: 12 }).map((_, i) => {
+        {Array.from({ length: 28 }).map((_, i) => {
           const left = Math.random() * 100
-          const duration = 2500 + Math.random() * 2000 // 2.5s - 4.5s
+          const duration = 3000 + Math.random() * 2500 // 3.0s - 5.5s
           const delay = Math.random() * 1200
-          const size = 18 + Math.random() * 14 // 18-32px
+          const size = 48 // uniform size for all falling suns
           const src = sunList[(i + idx) % (sunList.length || 1)] || imgSrc
           return (
             <img
@@ -102,11 +101,11 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
             <img
               src={imgSrc}
               alt="Sun"
-              className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
-              style={{ animation: 'sun-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+              className="h-64 w-64 sm:h-80 sm:w-80 object-contain"
+              style={{ animation: 'sun-rise 1200ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
             />
           ) : (
-            <div className="h-40 w-40 sm:h-48 sm:w-48 rounded-full bg-yellow-300 shadow-inner" />
+            <div className="h-64 w-64 sm:h-80 sm:w-80 rounded-full bg-yellow-300 shadow-inner" />
           )}
         </button>
 
