@@ -7,21 +7,35 @@ import { FiCheckCircle } from "react-icons/fi";
 import { supabase } from '../supabaseClient'
 
 const Home: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-  const [nowMins, setNowMins] = useState<number>(() => new Date().getHours() * 60 + new Date().getMinutes());
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [triggeredIds, setTriggeredIds] = useState<string[]>([]);
-  const [showChoices, setShowChoices] = useState(false);
-  const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
-
   const LS_KEY = "ritmo.routines";
   const todayKey = new Date().toISOString().slice(0, 10);
   const LS_DONE_KEY = `ritmo.routines.done.${todayKey}`;
   const LS_TRIG_KEY = `ritmo.routines.trig.${todayKey}`;
+
+  const [open, setOpen] = useState(false);
+  const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [completedIds, setCompletedIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_DONE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [nowMins, setNowMins] = useState<number>(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [triggeredIds, setTriggeredIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_TRIG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showChoices, setShowChoices] = useState(false);
+  const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
 
   // On mount: if user is signed in, load routines from DB for that user;
   // otherwise fall back to localStorage. DB results are preferred when available.
@@ -76,26 +90,14 @@ const Home: React.FC = () => {
     } catch {}
   }, [routines]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_DONE_KEY);
-      if (raw) setCompletedIds(JSON.parse(raw));
-    } catch {}
-  }, []);
-
+  // Save completedIds to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem(LS_DONE_KEY, JSON.stringify(completedIds));
     } catch {}
   }, [completedIds]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_TRIG_KEY);
-      if (raw) setTriggeredIds(JSON.parse(raw));
-    } catch {}
-  }, []);
-
+  // Save triggeredIds to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem(LS_TRIG_KEY, JSON.stringify(triggeredIds));
@@ -225,11 +227,18 @@ const Home: React.FC = () => {
     const now = nowMs;
     for (const r of sorted) {
       if (completedIds.includes(r.id)) continue;
-      if (triggeredIds.includes(r.id)) continue;
+      if (triggeredIds.includes(r.id)) continue; // Already triggered for today
       if (!r.ringtone?.url) continue;
       const ts = toTodayMillis(r.hour, r.minute, r.period);
       const GRACE = 5 * 60_000; // 5 minutes
       if (now >= ts && now < ts + GRACE) {
+        // Mark as triggered BEFORE playing to prevent re-triggers on rapid re-renders or refreshes
+        setTriggeredIds((prev) => {
+          // Double-check it's not already in the list (race condition protection)
+          if (prev.includes(r.id)) return prev;
+          return [...prev, r.id];
+        });
+        
         if (!audioRef.current) audioRef.current = new Audio();
         const a = audioRef.current;
         a.src = r.ringtone.url;
@@ -240,7 +249,6 @@ const Home: React.FC = () => {
           // You can consider showing a non-intrusive in-app banner instead.
           // console.debug("Autoplay blocked for routine:", r.name);
         });
-        setTriggeredIds((prev) => [...prev, r.id]);
       }
     }
   }, [nowMs, sorted, completedIds, triggeredIds]);
