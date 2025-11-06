@@ -111,6 +111,10 @@ const App: React.FC = () => {
               }
             }).catch(() => {})
           }
+          // Notify other parts of the app (e.g., Home) that user just signed in
+          try {
+            window.dispatchEvent(new CustomEvent('ritmo:auth-signed-in'))
+          } catch {}
         } else {
           setChildName('')
           setShowChildName(false)
@@ -126,6 +130,17 @@ const App: React.FC = () => {
       sub?.subscription?.unsubscribe?.()
     }
   }, [hasGreetedLogin])
+
+  // Listen for app-wide login requests (e.g., when anonymous user hits the 3-routine limit)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      setPendingTab(detail?.pendingTab || 'home')
+      setShowLogin(true)
+    }
+    window.addEventListener('ritmo:request-login', handler as EventListener)
+    return () => window.removeEventListener('ritmo:request-login', handler as EventListener)
+  }, [])
 
   // Redirect /reset-password to root and show Reset modal. Also auto-open if returning from a recovery link
   useEffect(() => {

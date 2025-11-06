@@ -160,6 +160,48 @@ const Home: React.FC = () => {
     }
   };
 
+  // When user signs in (e.g., after hitting the anonymous limit), clear local drafts and reload from DB
+  useEffect(() => {
+    const onSignedIn = async () => {
+      try {
+        localStorage.removeItem(LS_KEY)
+        localStorage.removeItem(LS_DONE_KEY)
+        localStorage.removeItem(LS_TRIG_KEY)
+      } catch {}
+      setCompletedIds([])
+      setTriggeredIds([])
+      // Reload routines from DB for the signed-in user
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const user = userData?.user ?? null
+        if (user) {
+          const res = await supabase.from('routines').select('*').eq('routine_id', user.id)
+          const data = res?.data
+          if (data && Array.isArray(data)) {
+            const mapped = data.map((row: any) => {
+              let desc: any = {}
+              try {
+                desc = typeof row.description === 'string' ? JSON.parse(row.description) : row.description ?? {}
+              } catch (e) {
+                desc = row.description ?? {}
+              }
+              return { ...(desc as NewRoutine), id: `db-${row.id}` }
+            })
+            setRoutines(mapped as any)
+          } else {
+            setRoutines([])
+          }
+        } else {
+          setRoutines([])
+        }
+      } catch {
+        setRoutines([])
+      }
+    }
+    window.addEventListener('ritmo:auth-signed-in', onSignedIn as EventListener)
+    return () => window.removeEventListener('ritmo:auth-signed-in', onSignedIn as EventListener)
+  }, [])
+
   const selected = selectedId ? routines.find((r) => r.id === selectedId) ?? null : null;
 
   const deleteRoutine = (id: string) => {
@@ -275,7 +317,20 @@ const Home: React.FC = () => {
 
       <div className="py-4 sm:py-6 flex items-center justify-center">
         <button
-          onClick={() => setOpen(true)}
+          onClick={async () => {
+            try {
+              const { data: userData } = await supabase.auth.getUser()
+              const user = userData?.user ?? null
+              if (!user && routines.length >= 2) {
+                // Anonymous limit reached – ask to log in
+                try {
+                  window.dispatchEvent(new CustomEvent('ritmo:request-login', { detail: { reason: 'limit', pendingTab: 'home' } }))
+                } catch {}
+                return
+              }
+            } catch {}
+            setOpen(true)
+          }}
           className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-3xl sm:text-4xl"
           aria-label="Add Routine"
         >
