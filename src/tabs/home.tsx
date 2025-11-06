@@ -5,6 +5,11 @@ import CompletionChoicesModal from "../components/CompletionChoicesModal";
 import { FiCheckCircle } from "react-icons/fi";
 // @ts-ignore - local JS client without types shipped here
 import { supabase } from '../supabaseClient'
+// Default assets for the starter routine
+// @ts-ignore - Vite will handle asset import to URL
+import brushGif from '../asset-gif/brushing.gif'
+// @ts-ignore - Vite will handle asset import to URL
+import roosterWav from '../alarm/mixkit-rooster-crowing-in-the-morning-2462.wav'
 
 const Home: React.FC = () => {
   const LS_KEY = "ritmo.routines";
@@ -37,6 +42,18 @@ const Home: React.FC = () => {
   const [showChoices, setShowChoices] = useState(false);
   const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
 
+  // Define a default starter routine shown when the list is empty
+  const DEFAULT_ROUTINE: NewRoutine & { id: string } = {
+    id: 'default-1',
+    name: 'Brush My Teeth',
+    hour: 7,
+    minute: 0,
+    period: 'AM',
+    preset: { key: 'brushing', label: 'Brush My Teeth', url: brushGif as unknown as string },
+    ringtoneName: 'Rooster Crow',
+    ringtone: { key: 'mixkit-rooster-crowing-in-the-morning-2462', label: 'Rooster Crow', url: roosterWav as unknown as string },
+  }
+
   // On mount: if user is signed in, load routines from DB for that user;
   // otherwise fall back to localStorage. DB results are preferred when available.
   useEffect(() => {
@@ -60,7 +77,12 @@ const Home: React.FC = () => {
               // Keep a stable id used by the app (prefix with db- to avoid collisions with local tmp ids)
               return { ...(desc as NewRoutine), id: `db-${row.id}` };
             });
-            setRoutines(mapped as any);
+            if (mapped.length === 0) {
+              // Show a friendly starter routine for new signed-in users (local only, not persisted to DB automatically)
+              setRoutines([DEFAULT_ROUTINE] as any)
+            } else {
+              setRoutines(mapped as any);
+            }
             return;
           }
         }
@@ -68,13 +90,27 @@ const Home: React.FC = () => {
         // no signed-in user or DB fetch failed: fallback to localStorage
         try {
           const raw = localStorage.getItem(LS_KEY);
-          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+          if (raw && !cancelled) {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setRoutines(parsed)
+            } else if (!cancelled) {
+              setRoutines([DEFAULT_ROUTINE])
+            }
+          } else if (!cancelled) {
+            setRoutines([DEFAULT_ROUTINE])
+          }
         } catch {}
       } catch (err) {
         // If anything goes wrong, fall back to localStorage (silent)
         try {
           const raw = localStorage.getItem(LS_KEY);
-          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+          if (raw && !cancelled) {
+            const parsed = JSON.parse(raw)
+            setRoutines(Array.isArray(parsed) && parsed.length > 0 ? parsed : [DEFAULT_ROUTINE])
+          } else if (!cancelled) {
+            setRoutines([DEFAULT_ROUTINE])
+          }
         } catch {}
       }
     };
