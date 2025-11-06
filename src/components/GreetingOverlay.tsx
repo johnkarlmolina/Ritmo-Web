@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export type GreetingOverlayProps = {
@@ -33,13 +33,65 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
   const [idx, setIdx] = useState(0)
   const imgSrc = sunList[idx] ?? sunList[0]
 
+  // Auto-dismiss after 3 seconds when opened
+  useEffect(() => {
+    if (!open) return
+    const t = setTimeout(() => onClose(), 3000)
+    return () => clearTimeout(t)
+  }, [open, onClose])
+
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[60]">
-      {/* Soft gradient background like the mock */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#FFF7A9] to-[#92F3FF]" />
-      <div className="relative z-10 h-full w-full flex flex-col items-center justify-center px-6 text-slate-800 select-none">
+    <div className="fixed inset-0 z-[60] bg-transparent">
+      {/* Animations for entrance, falling suns, and subtle text pop */}
+      <style>{`
+        @keyframes sun-enter {
+          0% { transform: translateY(-50vh) scale(0.8); opacity: 0; }
+          60% { transform: translateY(10px) scale(1.05); opacity: 1; }
+          80% { transform: translateY(-6px) scale(0.98); }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        @keyframes fall {
+          0% { transform: translateY(-10%); opacity: 0; }
+          10% { opacity: 1; }
+          100% { transform: translateY(110vh); opacity: 0; }
+        }
+        @keyframes text-pop {
+          0% { transform: translateY(8px) scale(0.98); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+      `}</style>
+
+      {/* Falling suns decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {Array.from({ length: 12 }).map((_, i) => {
+          const left = Math.random() * 100
+          const duration = 2500 + Math.random() * 2000 // 2.5s - 4.5s
+          const delay = Math.random() * 1200
+          const size = 18 + Math.random() * 14 // 18-32px
+          const src = sunList[(i + idx) % (sunList.length || 1)] || imgSrc
+          return (
+            <img
+              key={i}
+              src={src}
+              alt=""
+              className="absolute"
+              style={{
+                left: `${left}%`,
+                top: '-10%',
+                width: `${size}px`,
+                height: `${size}px`,
+                animation: `fall ${duration}ms linear ${delay}ms infinite`,
+                filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.2))',
+              }}
+            />
+          )
+        })}
+      </div>
+
+      {/* Foreground content */}
+      <div className="relative h-full w-full flex flex-col items-center justify-center px-6 text-slate-800 select-none">
         <button
           type="button"
           onClick={() => setIdx((i) => (sunList.length ? (i + 1) % sunList.length : 0))}
@@ -47,24 +99,33 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
           aria-label="Change sun emotion"
         >
           {imgSrc ? (
-            <img src={imgSrc} alt="Sun" className="h-40 w-40 sm:h-48 sm:w-48 object-contain" />
+            <img
+              src={imgSrc}
+              alt="Sun"
+              className="h-40 w-40 sm:h-48 sm:w-48 object-contain"
+              style={{ animation: 'sun-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) both' }}
+            />
           ) : (
             <div className="h-40 w-40 sm:h-48 sm:w-48 rounded-full bg-yellow-300 shadow-inner" />
           )}
         </button>
 
         <div className="text-center">
-          <div className="text-2xl sm:text-3xl font-semibold text-slate-700">Good Morning</div>
-          <div className="mt-2 text-3xl sm:text-4xl font-bold underline decoration-2 decoration-slate-700">{name}</div>
+          <div
+            className="text-2xl sm:text-3xl font-semibold text-slate-700 transition-transform duration-200 hover:scale-105 active:scale-95"
+            style={{ animation: 'text-pop 500ms ease-out both' }}
+          >
+            Good Morning
+          </div>
+          <div
+            className="mt-2 text-3xl sm:text-4xl font-bold underline decoration-2 decoration-slate-700 transition-transform duration-200 hover:scale-110 active:scale-95"
+            style={{ animation: 'text-pop 650ms ease-out both' }}
+          >
+            {name}
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-10 rounded-full bg-teal-700 hover:bg-teal-600 text-white font-semibold px-8 py-3 shadow"
-        >
-          Continue
-        </button>
+        {/* Auto-closes after 3 seconds; no manual Continue button */}
       </div>
     </div>,
     document.body
