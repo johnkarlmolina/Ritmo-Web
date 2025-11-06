@@ -197,11 +197,11 @@ const App: React.FC = () => {
     >
       {/* Header */}
       <header className="sticky top-0 z-30" style={{ backgroundColor: '#2D7778' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 grid grid-cols-[1fr_auto_1fr] items-center">
-          <div className="flex items-center gap-2 justify-self-start">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between sm:grid sm:grid-cols-[1fr_auto_1fr]">
+          <div className="flex items-center gap-2 sm:justify-self-start">
             <img src={logoAlt as string} alt="Ritmo" className="h-8 sm:h-9 w-auto select-none" draggable={false} />
           </div>
-          <nav className="hidden sm:flex items-center gap-5 justify-center justify-self-center">
+          <nav className="hidden sm:flex items-center gap-5 justify-center sm:justify-self-center">
             {tabs.map((t) => {
               const isActive = active === t.id
               return (
@@ -234,7 +234,7 @@ const App: React.FC = () => {
               )
             })}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 justify-self-end">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 ml-auto sm:ml-0 sm:justify-self-end">
             {/* Child name: hide on very small screens, show from sm+ with truncation */}
             {isAuthed && childName ? (
               <div className="hidden sm:flex items-center gap-2 text-white/90 text-xs sm:text-sm min-w-0 max-w-[40vw] sm:max-w-xs">
