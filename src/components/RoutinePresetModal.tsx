@@ -53,9 +53,12 @@ const RoutinePresetModal: React.FC<Props> = ({ open, onClose, onSelect }) => {
       return { key, label, url }
     })
 
+    // Exclude BookGuide and Controller from routine presets
+    const filtered = items.filter((p) => !['bookguide', 'controller'].includes(p.key))
+
     // Sort by label for predictable order
-    items.sort((a, b) => a.label.localeCompare(b.label))
-    return items
+    filtered.sort((a, b) => a.label.localeCompare(b.label))
+    return filtered
   }, [])
 
   if (!open) return null
