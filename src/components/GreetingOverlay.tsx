@@ -5,9 +5,10 @@ export type GreetingOverlayProps = {
   open: boolean
   name: string
   onClose: () => void
+  isWelcomeBack?: boolean // Add flag to differentiate between initial and return greeting
 }
 
-const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }) => {
+const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose, isWelcomeBack = false }) => {
   // Load sun images dynamically from asset-gif folder
   // @ts-ignore - vite import glob typing
   const sunMap = useMemo(
@@ -114,7 +115,7 @@ const GreetingOverlay: React.FC<GreetingOverlayProps> = ({ open, name, onClose }
             className="text-2xl sm:text-3xl font-semibold text-slate-700 transition-transform duration-200 hover:scale-105 active:scale-95"
             style={{ animation: 'text-pop 500ms ease-out both' }}
           >
-            Good Morning
+            {isWelcomeBack ? 'Welcome Back' : 'Good Morning'}
           </div>
           {name?.trim() ? (
             <div
