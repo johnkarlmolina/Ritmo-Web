@@ -178,15 +178,6 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
               onChange={(e) => setRoutineName(e.target.value)}
             />
 
-            <input
-              type="text"
-              placeholder="Ringtone name"
-              className="w-full rounded-2xl border px-4 py-3 text-base outline-none focus:ring-2"
-              style={{ borderColor: errors.ringtoneName ? RED : TEAL + '55' }}
-              value={ringtoneName}
-              onChange={(e) => setRingtoneName(e.target.value)}
-            />
-
             <button
               type="button"
               onClick={() => setShowRingtone(true)}
