@@ -1,6 +1,28 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+// @ts-ignore - local JS client without types shipped here
+import { supabase } from '../supabaseClient'
 
 const Progress: React.FC = () => {
+  const [childNickname, setChildNickname] = useState("");
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const meta = (user.user_metadata ?? {}) as any;
+        setChildNickname(meta?.child_name ?? "");
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-50 to-teal-100 p-4 md:p-10 flex justify-center items-start">
       <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-10 w-full max-w-5xl">
@@ -13,7 +35,7 @@ const Progress: React.FC = () => {
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 md:mb-10 gap-4">
           <div className="text-gray-700">
             <p className="text-lg font-semibold">
-              For: <span className="font-normal">Sai</span>
+              For: <span className="font-normal">{childNickname || "—"}</span>
             </p>
             <p className="mt-1 text-sm md:text-base">
               Week of:{" "}
