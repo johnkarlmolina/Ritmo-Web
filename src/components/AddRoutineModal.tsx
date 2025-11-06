@@ -34,13 +34,11 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
   const [showPreset, setShowPreset] = useState(false)
   const [showRingtone, setShowRingtone] = useState(false)
   const [ringtone, setRingtone] = useState<Ringtone | null>(null)
-  const [ringtoneName, setRingtoneName] = useState<string>('')
   const [preset, setPreset] = useState<Preset | null>(null)
   const [errors, setErrors] = useState({
     name: false,
     preset: false,
     ringtone: false,
-    ringtoneName: false,
   })
   useEffect(() => {
     if (!open) return
@@ -62,14 +60,12 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
       name: !routineName.trim(),
       preset: !preset,
       ringtone: !ringtone,
-      ringtoneName: !ringtoneName.trim(),
     }
     setErrors(missing)
 
     const missingLabels: string[] = []
     if (missing.name) missingLabels.push('Routine name')
     if (missing.preset) missingLabels.push('Routine preset')
-    if (missing.ringtoneName) missingLabels.push('Ringtone name')
     if (missing.ringtone) missingLabels.push('Ringtone selection')
 
     if (missingLabels.length > 0) {
@@ -82,7 +78,7 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
       period,
       name: (routineName || preset?.label || 'New Routine').trim(),
       preset,
-      ringtoneName: ringtoneName.trim(),
+      ringtoneName: ringtone?.label ?? '',
       ringtone,
     }
     if (onDone) onDone(payload)
