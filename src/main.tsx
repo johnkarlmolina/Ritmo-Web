@@ -1,10 +1,10 @@
 import React, { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import Home from './tabs/Home'
-import Media from './tabs/Media'
-import Progress from './tabs/Progress'
-import Setting from './tabs/Setting'
+import Home from './tabs/home'
+import Media from './tabs/media'
+import Progress from './tabs/progress'
+import Setting from './tabs/setting'
 import Modal from './components/Modal'
 import LoginForm from './auth/LoginForm'
 import SignupForm from './auth/signup'
@@ -42,15 +42,20 @@ const App: React.FC = () => {
   const [showChildName, setShowChildName] = useState(false)
   const [childNameDraft, setChildNameDraft] = useState('')
 
-  const childKey = (uid: string) => `ritmo:childName:${uid}`
-  const loadChildName = (uid: string) => {
+  const loadChildName = async () => {
     try {
-      const saved = localStorage.getItem(childKey(uid)) || ''
-      setChildName(saved)
-      setChildNameDraft(saved)
-      if (!saved) setShowChildName(true)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const meta = (user.user_metadata ?? {}) as any
+        const nickname = meta?.child_name ?? ''
+        setChildName(nickname)
+        setChildNameDraft(nickname)
+        if (!nickname) setShowChildName(true)
+      }
     } catch (e) {
-      // ignore storage errors
+      console.error('Error loading child name:', e)
     }
   }
 
@@ -62,7 +67,7 @@ const App: React.FC = () => {
       const uid = session?.user?.id ?? null
       setUserId(uid)
       if (uid) {
-        loadChildName(uid)
+        loadChildName()
       } else {
         setChildName('')
         setShowChildName(false)
@@ -78,8 +83,16 @@ const App: React.FC = () => {
         const uid = session?.user?.id ?? null
         setUserId(uid)
         if (uid) {
-          loadChildName(uid)
+          loadChildName()
+        } else {
+          setChildName('')
+          setShowChildName(false)
+          setChildNameDraft('')
         }
+      } else {
+        setChildName('')
+        setShowChildName(false)
+        setChildNameDraft('')
       }
     })
     return () => {
@@ -284,15 +297,26 @@ const App: React.FC = () => {
             closable={false}
           >
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
                 const name = childNameDraft.trim()
                 if (!name || !userId) return
                 try {
-                  localStorage.setItem(childKey(userId), name)
-                } catch {}
-                setChildName(name)
-                setShowChildName(false)
+                  // Update user metadata with child name
+                  const { error } = await supabase.auth.updateUser({
+                    data: { child_name: name }
+                  })
+                  if (error) {
+                    console.error('Error updating child name:', error)
+                    window.alert('Failed to save nickname. Please try again.')
+                    return
+                  }
+                  setChildName(name)
+                  setShowChildName(false)
+                } catch (err) {
+                  console.error('Unexpected error updating child name:', err)
+                  window.alert('Failed to save nickname. Please try again.')
+                }
               }}
               className="space-y-5"
             >
