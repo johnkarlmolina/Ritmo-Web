@@ -53,11 +53,12 @@ const RoutinePresetModal: React.FC<Props> = ({ open, onClose, onSelect }) => {
       return { key, label, url }
     })
 
-    // Exclude BookGuide, Controller, and any Sun_* preview assets from routine presets
+    // Exclude BookGuide, Controller, and any Sun_* or Moon_* preview assets from routine presets
     const filtered = items.filter((p) => {
-      if (['bookguide', 'controller'].includes(p.key)) return false
-      // Remove any asset whose key starts with 'sun' (e.g., sun_1_removebg_preview)
-      if (p.key.startsWith('sun')) return false
+      const key = p.key
+      if (['bookguide', 'controller'].includes(key)) return false
+      if (key.startsWith('sun')) return false
+      if (key.startsWith('moon')) return false
       return true
     })
 

@@ -164,7 +164,6 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
             >
               Choose Routine preset
             </button>
-
             <input
               type="text"
               placeholder="Routine name"
@@ -190,14 +189,14 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
         <RoutinePresetModal
           open={showPreset}
           onClose={() => setShowPreset(false)}
-          onSelect={(preset: Preset) => {
-            setPreset(preset)
-            setRoutineName(preset.label)
+          onSelect={(p: Preset) => {
+            setPreset(p)
+            setRoutineName(p.label)
             setShowPreset(false)
           }}
         />
 
-        {/* Nested: Ringtone Picker */}
+  {/* Nested: Ringtone Picker */}
         <RingtoneModal
           open={showRingtone}
           onClose={() => setShowRingtone(false)}
