@@ -149,23 +149,28 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
         {/* Congrats overlay */}
         {showCongrats && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(180deg, #FEF9C3 0%, #A7F3D0 100%)' }}>
+            {/* Sequential left-to-center star fill into containers */}
             <style>{`
-              @keyframes fall-star { 0%{ transform: translateY(-8%); } 100%{ transform: translateY(110%); } }
+              @keyframes star-slide-in {
+                0%   { transform: translateX(-140%) scale(0.9); opacity: 0.15; }
+                70%  { transform: translateX(8%) scale(1.06);  opacity: 1; }
+                100% { transform: translateX(0) scale(1);      opacity: 1; }
+              }
             `}</style>
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {Array.from({ length: 24 }).map((_, i) => {
-                const left = Math.random() * 100
-                const size = 14 + Math.round(Math.random() * 18)
-                const duration = 900 + Math.random() * 400 // faster fall
-                const delay = Math.random() * 200 // minimal delay
-                return (
-                  <div key={i} className="absolute text-yellow-400" style={{ left: `${left}%`, top: '-10%', fontSize: `${size}px`, animation: `fall-star ${duration}ms linear ${delay}ms forwards` }}>★</div>
-                )
-              })}
-            </div>
             <div className="relative text-center">
-              <div className="flex items-center justify-center gap-4 mb-4 text-yellow-400 text-3xl">
-                <AiFillStar /><AiFillStar /><AiFillStar />
+              {/* Star containers */}
+              <div className="flex items-center justify-center gap-6 sm:gap-8 mb-4">
+                {[0,1,2].map(i => (
+                  <div key={i} className="relative" style={{ width: 44, height: 44 }}>
+                    {/* Container (outline) */}
+                    <AiFillStar className="text-slate-300" style={{ width: 44, height: 44 }} />
+                    {/* Animated star filling the container */}
+                    <AiFillStar
+                      className="absolute top-0 left-0 text-yellow-400"
+                      style={{ width: 44, height: 44, animation: `star-slide-in 700ms cubic-bezier(.22,1,.36,1) ${i * 400}ms both` }}
+                    />
+                  </div>
+                ))}
               </div>
               <div className="text-2xl font-semibold text-slate-700">Good Job</div>
               <div className="mt-1 text-3xl font-bold text-slate-800">{childName ? `“${childName}”` : 'Great Work!'}</div>
