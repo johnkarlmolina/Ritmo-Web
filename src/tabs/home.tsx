@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal";
 import RoutineDetailModal from "../components/RoutineDetailModal";
 import CompletionChoicesModal from "../components/CompletionChoicesModal";
+import BookGuideModal from "../components/BookGuideModal";
 import { FiCheckCircle } from "react-icons/fi";
 // @ts-ignore - local JS client without types shipped here
 import { supabase } from '../supabaseClient'
@@ -41,6 +42,9 @@ const Home: React.FC = () => {
   });
   const [showChoices, setShowChoices] = useState(false);
   const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
+  const [showBookGuide, setShowBookGuide] = useState(false);
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
+  const [justCompletedKey, setJustCompletedKey] = useState<string | null>(null);
 
   // Define a default starter routine shown when the list is empty
   const DEFAULT_ROUTINE: NewRoutine & { id: string } = {
@@ -119,6 +123,15 @@ const Home: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  // Always make the default routine reusable on refresh: ensure it's not marked completed/triggered
+  useEffect(() => {
+    // If default exists in the list, remove it from today's completed/triggered sets
+    const hasDefault = routines.some(r => r.id === DEFAULT_ROUTINE.id)
+    if (!hasDefault) return
+    setCompletedIds(prev => (prev.includes(DEFAULT_ROUTINE.id) ? prev.filter(id => id !== DEFAULT_ROUTINE.id) : prev))
+    setTriggeredIds(prev => (prev.includes(DEFAULT_ROUTINE.id) ? prev.filter(id => id !== DEFAULT_ROUTINE.id) : prev))
+  }, [routines])
 
   useEffect(() => {
     try {
@@ -399,11 +412,20 @@ const Home: React.FC = () => {
                   // Only show completion choices when routine is at time or already past
                   if (!upcoming) {
                     setJustCompletedName(r.name)
-                    // Mark as completed
-                    if (!completedIds.includes(r.id)) {
-                      setCompletedIds((prev) => [...prev, r.id])
+                    setJustCompletedId(r.id)
+                    setJustCompletedKey(r.preset?.key ?? null)
+                    // If this is the toothbrush preset, require finishing the Book Guide to mark completed
+                    const isToothbrush = (r.preset?.key ?? '').toLowerCase().includes('brush') || (r.preset?.label ?? '').toLowerCase().includes('brush') || r.name.toLowerCase().includes('brush')
+                    if (isToothbrush) {
+                      // Do NOT mark as completed yet; open choices (Book Guide will mark on completion)
+                      setShowChoices(true)
+                    } else {
+                      // Non-toothbrush routines: keep previous behavior (mark on tap)
+                      if (!completedIds.includes(r.id)) {
+                        setCompletedIds((prev) => [...prev, r.id])
+                      }
+                      setShowChoices(true)
                     }
-                    setShowChoices(true)
                   }
                 }}
                 className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-2.5 sm:p-3 md:p-4 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
@@ -468,8 +490,20 @@ const Home: React.FC = () => {
         open={showChoices}
         onClose={() => setShowChoices(false)}
         routineName={justCompletedName ?? undefined}
-        onChooseBookGuide={() => setShowChoices(false)}
+        onChooseBookGuide={() => { setShowChoices(false); setShowBookGuide(true) }}
         onChooseMiniGame={() => setShowChoices(false)}
+      />
+
+      <BookGuideModal
+        open={showBookGuide}
+        onClose={() => setShowBookGuide(false)}
+        routineName={justCompletedName ?? undefined}
+        presetKey={justCompletedKey ?? undefined}
+        onComplete={() => {
+          if (justCompletedId && !completedIds.includes(justCompletedId)) {
+            setCompletedIds((prev) => [...prev, justCompletedId])
+          }
+        }}
       />
     </div>
   );
