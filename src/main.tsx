@@ -46,6 +46,8 @@ const App: React.FC = () => {
   const [showGreeting, setShowGreeting] = useState(false)
   const [hasGreetedLogin, setHasGreetedLogin] = useState(false)
   const [showMobileNav, setShowMobileNav] = useState(false)
+  const [hasLeftHome, setHasLeftHome] = useState(false)
+  const [isWelcomeBackGreeting, setIsWelcomeBackGreeting] = useState(false)
 
   const loadChildName = async () => {
     try {
@@ -59,12 +61,8 @@ const App: React.FC = () => {
         setChildNameDraft(nickname)
         if (!nickname) {
           setShowChildName(true)
-        } else if (!hasGreetedLogin) {
-          console.debug('[greet] loadChildName -> nickname found, greeting now')
-          // If a nickname exists and we haven't greeted yet this login, greet now
-          setShowGreeting(true)
-          setHasGreetedLogin(true)
         }
+        // No greeting on initial load - only when returning to home tab
       }
     } catch (e) {
       console.error('Error loading child name:', e)
@@ -80,23 +78,7 @@ const App: React.FC = () => {
       setUserId(uid)
       if (uid) {
         loadChildName()
-        // Show greeting once per login/initial load if a name exists in metadata
-        if (!hasGreetedLogin) {
-          supabase.auth.getUser().then((res: any) => {
-            const data = res?.data
-            const nickname = (data?.user?.user_metadata as any)?.child_name || ''
-            if (nickname.trim()) {
-              console.debug('[greet] initial session -> nickname found, greeting now')
-              // ensure state is in sync and greet
-              setChildName(nickname)
-              setChildNameDraft(nickname)
-              setShowGreeting(true)
-              setHasGreetedLogin(true)
-            } else {
-              console.debug('[greet] initial session -> no nickname yet')
-            }
-          }).catch(() => {})
-        }
+        // No greeting on initial page load/refresh
       } else {
         setChildName('')
         setShowChildName(false)
@@ -114,21 +96,25 @@ const App: React.FC = () => {
         setUserId(uid)
         if (uid) {
           loadChildName()
-          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && !hasGreetedLogin) {
+          // Only greet on actual sign-in, not on page refresh (INITIAL_SESSION)
+          if (event === 'SIGNED_IN' && !hasGreetedLogin) {
             supabase.auth.getUser().then((res: any) => {
               const data = res?.data
               const nickname = (data?.user?.user_metadata as any)?.child_name || ''
               if (nickname.trim()) {
-                console.debug('[greet] auth event ->', event, 'nickname found, greeting now')
+                console.debug('[greet] SIGNED_IN event -> nickname found, greeting now')
                 setChildName(nickname)
                 setChildNameDraft(nickname)
+                setIsWelcomeBackGreeting(false) // Initial login greeting
                 setShowGreeting(true)
                 setHasGreetedLogin(true)
-              } else {
-                console.debug('[greet] auth event ->', event, 'no nickname yet')
               }
             }).catch(() => {})
           }
+          // Notify other parts of the app (e.g., Home) that user just signed in
+          try {
+            window.dispatchEvent(new CustomEvent('ritmo:auth-signed-in'))
+          } catch {}
         } else {
           setChildName('')
           setShowChildName(false)
@@ -144,6 +130,17 @@ const App: React.FC = () => {
       sub?.subscription?.unsubscribe?.()
     }
   }, [hasGreetedLogin])
+
+  // Listen for app-wide login requests (e.g., when anonymous user hits the 3-routine limit)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      setPendingTab(detail?.pendingTab || 'home')
+      setShowLogin(true)
+    }
+    window.addEventListener('ritmo:request-login', handler as EventListener)
+    return () => window.removeEventListener('ritmo:request-login', handler as EventListener)
+  }, [])
 
   // Redirect /reset-password to root and show Reset modal. Also auto-open if returning from a recovery link
   useEffect(() => {
@@ -171,11 +168,24 @@ const App: React.FC = () => {
       setChildNameDraft('')
       setShowChildName(false)
       setHasGreetedLogin(false)
+      setHasLeftHome(false)
       console.debug('[auth] signed out, reset greet flag')
     } catch (e) {
       console.error(e)
     }
   }
+
+  // Handle "Welcome back" greeting when returning to home tab
+  useEffect(() => {
+    if (active === 'home' && hasLeftHome && isAuthed && childName && !showGreeting) {
+      console.debug('[greet] Returning to home tab -> Welcome back!')
+      setIsWelcomeBackGreeting(true) // This is a "welcome back" greeting
+      setShowGreeting(true)
+      setHasLeftHome(false)
+    } else if (active !== 'home' && isAuthed) {
+      setHasLeftHome(true)
+    }
+  }, [active, hasLeftHome, isAuthed, childName, showGreeting])
 
   const renderContent = () => {
     switch (active) {
@@ -437,7 +447,12 @@ const App: React.FC = () => {
           </Modal>
 
           {/* Greeting Overlay */}
-          <GreetingOverlay open={showGreeting} name={childName} onClose={() => setShowGreeting(false)} />
+          <GreetingOverlay 
+            open={showGreeting} 
+            name={childName} 
+            onClose={() => setShowGreeting(false)} 
+            isWelcomeBack={isWelcomeBackGreeting}
+          />
     </div>
   )
 }

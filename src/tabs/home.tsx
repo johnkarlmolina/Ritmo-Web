@@ -2,26 +2,61 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal";
 import RoutineDetailModal from "../components/RoutineDetailModal";
 import CompletionChoicesModal from "../components/CompletionChoicesModal";
+import BookGuideModal from "../components/BookGuideModal";
 import { FiCheckCircle } from "react-icons/fi";
 // @ts-ignore - local JS client without types shipped here
 import { supabase } from '../supabaseClient'
+// Default assets for the starter routine
+// @ts-ignore - Vite will handle asset import to URL
+import brushGif from '../asset-gif/brushing.gif'
+// @ts-ignore - Vite will handle asset import to URL
+import roosterWav from '../alarm/mixkit-rooster-crowing-in-the-morning-2462.wav'
 
 const Home: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-  const [nowMins, setNowMins] = useState<number>(() => new Date().getHours() * 60 + new Date().getMinutes());
-  const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [triggeredIds, setTriggeredIds] = useState<string[]>([]);
-  const [showChoices, setShowChoices] = useState(false);
-  const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
-
   const LS_KEY = "ritmo.routines";
   const todayKey = new Date().toISOString().slice(0, 10);
   const LS_DONE_KEY = `ritmo.routines.done.${todayKey}`;
   const LS_TRIG_KEY = `ritmo.routines.trig.${todayKey}`;
+
+  const [open, setOpen] = useState(false);
+  const [routines, setRoutines] = useState<Array<NewRoutine & { id: string }>>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [completedIds, setCompletedIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_DONE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [nowMins, setNowMins] = useState<number>(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [triggeredIds, setTriggeredIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_TRIG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showChoices, setShowChoices] = useState(false);
+  const [justCompletedName, setJustCompletedName] = useState<string | null>(null);
+  const [showBookGuide, setShowBookGuide] = useState(false);
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
+  const [justCompletedKey, setJustCompletedKey] = useState<string | null>(null);
+
+  // Define a default starter routine shown when the list is empty
+  const DEFAULT_ROUTINE: NewRoutine & { id: string } = {
+    id: 'default-1',
+    name: 'Brush My Teeth',
+    hour: 7,
+    minute: 0,
+    period: 'AM',
+    preset: { key: 'brushing', label: 'Brush My Teeth', url: brushGif as unknown as string },
+    ringtoneName: 'Rooster Crow',
+    ringtone: { key: 'mixkit-rooster-crowing-in-the-morning-2462', label: 'Rooster Crow', url: roosterWav as unknown as string },
+  }
 
   // On mount: if user is signed in, load routines from DB for that user;
   // otherwise fall back to localStorage. DB results are preferred when available.
@@ -46,7 +81,12 @@ const Home: React.FC = () => {
               // Keep a stable id used by the app (prefix with db- to avoid collisions with local tmp ids)
               return { ...(desc as NewRoutine), id: `db-${row.id}` };
             });
-            setRoutines(mapped as any);
+            if (mapped.length === 0) {
+              // Show a friendly starter routine for new signed-in users (local only, not persisted to DB automatically)
+              setRoutines([DEFAULT_ROUTINE] as any)
+            } else {
+              setRoutines(mapped as any);
+            }
             return;
           }
         }
@@ -54,13 +94,27 @@ const Home: React.FC = () => {
         // no signed-in user or DB fetch failed: fallback to localStorage
         try {
           const raw = localStorage.getItem(LS_KEY);
-          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+          if (raw && !cancelled) {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setRoutines(parsed)
+            } else if (!cancelled) {
+              setRoutines([DEFAULT_ROUTINE])
+            }
+          } else if (!cancelled) {
+            setRoutines([DEFAULT_ROUTINE])
+          }
         } catch {}
       } catch (err) {
         // If anything goes wrong, fall back to localStorage (silent)
         try {
           const raw = localStorage.getItem(LS_KEY);
-          if (raw && !cancelled) setRoutines(JSON.parse(raw));
+          if (raw && !cancelled) {
+            const parsed = JSON.parse(raw)
+            setRoutines(Array.isArray(parsed) && parsed.length > 0 ? parsed : [DEFAULT_ROUTINE])
+          } else if (!cancelled) {
+            setRoutines([DEFAULT_ROUTINE])
+          }
         } catch {}
       }
     };
@@ -70,32 +124,29 @@ const Home: React.FC = () => {
     };
   }, []);
 
+  // Always make the default routine reusable on refresh: ensure it's not marked completed/triggered
+  useEffect(() => {
+    // If default exists in the list, remove it from today's completed/triggered sets
+    const hasDefault = routines.some(r => r.id === DEFAULT_ROUTINE.id)
+    if (!hasDefault) return
+    setCompletedIds(prev => (prev.includes(DEFAULT_ROUTINE.id) ? prev.filter(id => id !== DEFAULT_ROUTINE.id) : prev))
+    setTriggeredIds(prev => (prev.includes(DEFAULT_ROUTINE.id) ? prev.filter(id => id !== DEFAULT_ROUTINE.id) : prev))
+  }, [routines])
+
   useEffect(() => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(routines));
     } catch {}
   }, [routines]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_DONE_KEY);
-      if (raw) setCompletedIds(JSON.parse(raw));
-    } catch {}
-  }, []);
-
+  // Save completedIds to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem(LS_DONE_KEY, JSON.stringify(completedIds));
     } catch {}
   }, [completedIds]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_TRIG_KEY);
-      if (raw) setTriggeredIds(JSON.parse(raw));
-    } catch {}
-  }, []);
-
+  // Save triggeredIds to localStorage whenever it changes
   useEffect(() => {
     try {
       localStorage.setItem(LS_TRIG_KEY, JSON.stringify(triggeredIds));
@@ -157,6 +208,48 @@ const Home: React.FC = () => {
       console.error("Error saving routine:", err);
     }
   };
+
+  // When user signs in (e.g., after hitting the anonymous limit), clear local drafts and reload from DB
+  useEffect(() => {
+    const onSignedIn = async () => {
+      try {
+        localStorage.removeItem(LS_KEY)
+        localStorage.removeItem(LS_DONE_KEY)
+        localStorage.removeItem(LS_TRIG_KEY)
+      } catch {}
+      setCompletedIds([])
+      setTriggeredIds([])
+      // Reload routines from DB for the signed-in user
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const user = userData?.user ?? null
+        if (user) {
+          const res = await supabase.from('routines').select('*').eq('routine_id', user.id)
+          const data = res?.data
+          if (data && Array.isArray(data)) {
+            const mapped = data.map((row: any) => {
+              let desc: any = {}
+              try {
+                desc = typeof row.description === 'string' ? JSON.parse(row.description) : row.description ?? {}
+              } catch (e) {
+                desc = row.description ?? {}
+              }
+              return { ...(desc as NewRoutine), id: `db-${row.id}` }
+            })
+            setRoutines(mapped as any)
+          } else {
+            setRoutines([])
+          }
+        } else {
+          setRoutines([])
+        }
+      } catch {
+        setRoutines([])
+      }
+    }
+    window.addEventListener('ritmo:auth-signed-in', onSignedIn as EventListener)
+    return () => window.removeEventListener('ritmo:auth-signed-in', onSignedIn as EventListener)
+  }, [])
 
   const selected = selectedId ? routines.find((r) => r.id === selectedId) ?? null : null;
 
@@ -225,11 +318,18 @@ const Home: React.FC = () => {
     const now = nowMs;
     for (const r of sorted) {
       if (completedIds.includes(r.id)) continue;
-      if (triggeredIds.includes(r.id)) continue;
+      if (triggeredIds.includes(r.id)) continue; // Already triggered for today
       if (!r.ringtone?.url) continue;
       const ts = toTodayMillis(r.hour, r.minute, r.period);
       const GRACE = 5 * 60_000; // 5 minutes
       if (now >= ts && now < ts + GRACE) {
+        // Mark as triggered BEFORE playing to prevent re-triggers on rapid re-renders or refreshes
+        setTriggeredIds((prev) => {
+          // Double-check it's not already in the list (race condition protection)
+          if (prev.includes(r.id)) return prev;
+          return [...prev, r.id];
+        });
+        
         if (!audioRef.current) audioRef.current = new Audio();
         const a = audioRef.current;
         a.src = r.ringtone.url;
@@ -240,7 +340,6 @@ const Home: React.FC = () => {
           // You can consider showing a non-intrusive in-app banner instead.
           // console.debug("Autoplay blocked for routine:", r.name);
         });
-        setTriggeredIds((prev) => [...prev, r.id]);
       }
     }
   }, [nowMs, sorted, completedIds, triggeredIds]);
@@ -267,7 +366,20 @@ const Home: React.FC = () => {
 
       <div className="py-4 sm:py-6 flex items-center justify-center">
         <button
-          onClick={() => setOpen(true)}
+          onClick={async () => {
+            try {
+              const { data: userData } = await supabase.auth.getUser()
+              const user = userData?.user ?? null
+              if (!user && routines.length >= 2) {
+                // Anonymous limit reached – ask to log in
+                try {
+                  window.dispatchEvent(new CustomEvent('ritmo:request-login', { detail: { reason: 'limit', pendingTab: 'home' } }))
+                } catch {}
+                return
+              }
+            } catch {}
+            setOpen(true)
+          }}
           className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-3xl sm:text-4xl"
           aria-label="Add Routine"
         >
@@ -300,7 +412,20 @@ const Home: React.FC = () => {
                   // Only show completion choices when routine is at time or already past
                   if (!upcoming) {
                     setJustCompletedName(r.name)
-                    setShowChoices(true)
+                    setJustCompletedId(r.id)
+                    setJustCompletedKey(r.preset?.key ?? null)
+                    // If this is the toothbrush preset, require finishing the Book Guide to mark completed
+                    const isToothbrush = (r.preset?.key ?? '').toLowerCase().includes('brush') || (r.preset?.label ?? '').toLowerCase().includes('brush') || r.name.toLowerCase().includes('brush')
+                    if (isToothbrush) {
+                      // Do NOT mark as completed yet; open choices (Book Guide will mark on completion)
+                      setShowChoices(true)
+                    } else {
+                      // Non-toothbrush routines: keep previous behavior (mark on tap)
+                      if (!completedIds.includes(r.id)) {
+                        setCompletedIds((prev) => [...prev, r.id])
+                      }
+                      setShowChoices(true)
+                    }
                   }
                 }}
                 className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-2.5 sm:p-3 md:p-4 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
@@ -365,8 +490,20 @@ const Home: React.FC = () => {
         open={showChoices}
         onClose={() => setShowChoices(false)}
         routineName={justCompletedName ?? undefined}
-        onChooseBookGuide={() => setShowChoices(false)}
+        onChooseBookGuide={() => { setShowChoices(false); setShowBookGuide(true) }}
         onChooseMiniGame={() => setShowChoices(false)}
+      />
+
+      <BookGuideModal
+        open={showBookGuide}
+        onClose={() => setShowBookGuide(false)}
+        routineName={justCompletedName ?? undefined}
+        presetKey={justCompletedKey ?? undefined}
+        onComplete={() => {
+          if (justCompletedId && !completedIds.includes(justCompletedId)) {
+            setCompletedIds((prev) => [...prev, justCompletedId])
+          }
+        }}
       />
     </div>
   );
