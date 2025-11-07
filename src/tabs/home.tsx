@@ -416,7 +416,7 @@ const Home: React.FC = () => {
                     // If this is the toothbrush preset, require finishing the Book Guide to mark completed
                     const keyName = (r.preset?.key ?? '') + ' ' + (r.preset?.label ?? '') + ' ' + r.name
                     const lowered = keyName.toLowerCase()
-                    const isGuided = lowered.includes('brush') || lowered.includes('eat')
+                    const isGuided = lowered.includes('brush') || lowered.includes('eat') || lowered.includes('bath') || lowered.includes('wash')
                     if (isGuided) {
                       // Guided routines require finishing Book Guide
                       setShowChoices(true)

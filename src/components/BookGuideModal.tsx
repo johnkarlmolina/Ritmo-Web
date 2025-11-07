@@ -43,10 +43,16 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
   const gifGettingFood = getPath(/getting-food\.(gif|png|jpe?g|svg)$/i)
   const gifEatingFood = getPath(/eating-food\.(gif|png|jpe?g|svg)$/i)
   const gifDoneEating = getPath(/done-eating\.(gif|png|jpe?g|svg)$/i)
+  // Bath preset step assets
+  const gifBathReady = getPath(/Bath-ready\.(gif|png|jpe?g|svg)$/i)
+  const gifBathCalling = getPath(/Bath-calling\.(gif|png|jpe?g|svg)$/i)
+  const gifBathBath = getPath(/Bath-bath\.(gif|png|jpe?g|svg)$/i)
+  const gifBathPutting = getPath(/Bath-putting(?:clothes)?\.(gif|png|jpe?g|svg)$/i)
 
   const lowerKeyName = (presetKey || '').toLowerCase() + ' ' + (routineName || '').toLowerCase()
   const isBrush = lowerKeyName.includes('brush')
   const isEat = lowerKeyName.includes('eat')
+  const isBath = lowerKeyName.includes('bath') || lowerKeyName.includes('wash')
 
   const steps: Step[] = useMemo(() => {
     if (isBrush) {
@@ -64,10 +70,18 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
         { img: gifDoneEating, title: 'Step 3', description: 'You are done eating! Clean up your area' },
       ]
     }
+    if (isBath) {
+      return [
+        { img: gifBathReady, title: 'Bath Ready', description: 'Prepare for bath time' },
+        { img: gifBathCalling, title: 'Bath Calling', description: 'Someone is calling — it’s bath time!' },
+        { img: gifBathBath, title: 'Bath Bath', description: 'Take a nice bath' },
+        { img: gifBathPutting, title: 'Bath Putting', description: 'Put on your clothes after bath' },
+      ]
+    }
     return [
       { img: gifGettingFood || gifGetTBTP || gifBrush, title: 'Coming soon', description: 'Book Guide steps for this routine will be available soon.' }
     ]
-  }, [isBrush, isEat, gifGetTBTP, gifPutPaste, gifBrush, gifRinse, gifGettingFood, gifEatingFood, gifDoneEating])
+  }, [isBrush, isEat, isBath, gifGetTBTP, gifPutPaste, gifBrush, gifRinse, gifGettingFood, gifEatingFood, gifDoneEating, gifBathReady, gifBathCalling, gifBathBath, gifBathPutting])
 
   const [idx, setIdx] = useState(0)
   const [childName, setChildName] = useState<string>('')
@@ -86,7 +100,7 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
 
   const step = steps[idx]
   const isLast = idx === steps.length - 1
-  const title = isBrush ? 'Brush My Teeth' : isEat ? "Let's Eat" : (routineName || 'Book Guide')
+  const title = isBrush ? 'Brush My Teeth' : isEat ? "Let's Eat" : isBath ? 'Bath Time' : (routineName || 'Book Guide')
   const filledStars = Math.min(idx + 1, 3)
 
   return createPortal(
