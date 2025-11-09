@@ -3,6 +3,7 @@ import React, { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import Home from './tabs/home'
+import Landingpage from './tabs/Landingpage'
 import Media from './tabs/media'
 import Progress from './tabs/progress'
 import Setting from './tabs/setting'
@@ -32,7 +33,7 @@ const tabs = [
 ]
 
 const App: React.FC = () => {
-  const [active, setActive] = useState<string>('home')
+  const [active, setActive] = useState<string>('landing')
   const [showLogin, setShowLogin] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
   const [showReset, setShowReset] = useState(false)
@@ -188,6 +189,7 @@ const App: React.FC = () => {
   }, [active, hasLeftHome, isAuthed, childName, showGreeting])
 
   const renderContent = () => {
+    if (active === 'landing') return <Landingpage onGoToWebsite={() => setActive('home')} />
     switch (active) {
       case 'media':
         return <Media />
@@ -205,13 +207,13 @@ const App: React.FC = () => {
       className="min-h-[100svh] flex flex-col text-white bg-slate-950 bg-cover bg-center bg-fixed"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      {/* Header */}
-      <header className="sticky top-0 z-30" style={{ backgroundColor: '#2D7778' }}>
+  {/* Header always visible (landing included) */}
+  <header className="sticky top-0 z-30" style={{ backgroundColor: '#2D7778' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between sm:grid sm:grid-cols-[1fr_auto_1fr]">
           <div className="flex items-center gap-2 sm:justify-self-start">
             <img src={logoAlt as string} alt="Ritmo" className="h-8 sm:h-9 w-auto select-none" draggable={false} />
           </div>
-          <nav className="hidden sm:flex items-center gap-5 justify-center sm:justify-self-center">
+          <nav className={`hidden sm:flex items-center gap-5 justify-center sm:justify-self-center ${active === 'landing' ? 'opacity-0 pointer-events-none' : ''}`}>
             {tabs.map((t) => {
               const isActive = active === t.id
               return (
@@ -268,19 +270,21 @@ const App: React.FC = () => {
                 Sign out
               </button>
             )}
-            {/* Mobile menu toggle */}
-            <button
-              type="button"
-              onClick={() => setShowMobileNav(v => !v)}
-              className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/15 hover:bg-white/5 text-white"
-              aria-label={showMobileNav ? 'Close navigation' : 'Open navigation'}
-            >
-              {showMobileNav ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
-            </button>
+            {/* Mobile menu toggle hidden on landing */}
+            {active !== 'landing' && (
+              <button
+                type="button"
+                onClick={() => setShowMobileNav(v => !v)}
+                className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-md border border-white/15 hover:bg-white/5 text-white"
+                aria-label={showMobileNav ? 'Close navigation' : 'Open navigation'}
+              >
+                {showMobileNav ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
+              </button>
+            )}
           </div>
         </div>
-        {/* Mobile dropdown nav */}
-        {showMobileNav ? (
+        {/* Mobile dropdown nav (not shown on landing) */}
+        {showMobileNav && active !== 'landing' ? (
           <div className="sm:hidden border-t border-white/10" style={{ backgroundColor: '#2D7778' }}>
             <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-4 gap-2">
               {tabs.map((t) => {
@@ -314,9 +318,9 @@ const App: React.FC = () => {
             </div>
           </div>
         ) : null}
-      </header>
+  </header>
 
-      {/* Main */}
+    {/* Main */}
   <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">{renderContent()}</main>
 
       {/* Footer */}

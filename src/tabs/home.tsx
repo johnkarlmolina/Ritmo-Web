@@ -6,9 +6,9 @@ import BookGuideModal from "../components/BookGuideModal";
 import { FiCheckCircle } from "react-icons/fi";
 // @ts-ignore - local JS client without types shipped here
 import { supabase } from '../supabaseClient'
-// Default assets for the starter routine
+// Default assets for the routines
 // @ts-ignore - Vite will handle asset import to URL
-import brushGif from '../asset-gif/brushing.gif'
+import eatGif from '../asset-gif/eating.gif'
 // @ts-ignore - Vite will handle asset import to URL
 import roosterWav from '../alarm/mixkit-rooster-crowing-in-the-morning-2462.wav'
 
@@ -46,14 +46,14 @@ const Home: React.FC = () => {
   const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
   const [justCompletedKey, setJustCompletedKey] = useState<string | null>(null);
 
-  // Define a default starter routine shown when the list is empty
+  // Define a default routine shown when the list is empty
   const DEFAULT_ROUTINE: NewRoutine & { id: string } = {
-    id: 'default-1',
-    name: 'Brush My Teeth',
-    hour: 7,
+    id: 'default-eat',
+    name: "Let's Eat",
+    hour: 12, // midday
     minute: 0,
-    period: 'AM',
-    preset: { key: 'brushing', label: 'Brush My Teeth', url: brushGif as unknown as string },
+    period: 'PM',
+    preset: { key: 'eat', label: "Let's Eat", url: eatGif as unknown as string },
     ringtoneName: 'Rooster Crow',
     ringtone: { key: 'mixkit-rooster-crowing-in-the-morning-2462', label: 'Rooster Crow', url: roosterWav as unknown as string },
   }
@@ -82,7 +82,7 @@ const Home: React.FC = () => {
               return { ...(desc as NewRoutine), id: `db-${row.id}` };
             });
             if (mapped.length === 0) {
-              // Show a friendly starter routine for new signed-in users (local only, not persisted to DB automatically)
+              // Starter routines for new signed-in users (local only)
               setRoutines([DEFAULT_ROUTINE] as any)
             } else {
               setRoutines(mapped as any);
@@ -101,8 +101,8 @@ const Home: React.FC = () => {
             } else if (!cancelled) {
               setRoutines([DEFAULT_ROUTINE])
             }
-          } else if (!cancelled) {
-            setRoutines([DEFAULT_ROUTINE])
+      } else if (!cancelled) {
+        setRoutines([DEFAULT_ROUTINE])
           }
         } catch {}
       } catch (err) {
@@ -126,7 +126,6 @@ const Home: React.FC = () => {
 
   // Always make the default routine reusable on refresh: ensure it's not marked completed/triggered
   useEffect(() => {
-    // If default exists in the list, remove it from today's completed/triggered sets
     const hasDefault = routines.some(r => r.id === DEFAULT_ROUTINE.id)
     if (!hasDefault) return
     setCompletedIds(prev => (prev.includes(DEFAULT_ROUTINE.id) ? prev.filter(id => id !== DEFAULT_ROUTINE.id) : prev))
@@ -392,7 +391,7 @@ const Home: React.FC = () => {
         {routines.length === 0 ? (
           <p className="text-center text-slate-700 text-2xl">No routines yet. Tap + to add one.</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          <div className={`grid ${routines.length === 1 ? 'grid-cols-1 place-items-center' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'} gap-3 sm:gap-4 lg:gap-6`}>
             {sorted.map((r) => {
               const ms = toTodayMillis(r.hour, r.minute, r.period);
               const diffMs = ms - nowMs;
@@ -415,12 +414,13 @@ const Home: React.FC = () => {
                     setJustCompletedId(r.id)
                     setJustCompletedKey(r.preset?.key ?? null)
                     // If this is the toothbrush preset, require finishing the Book Guide to mark completed
-                    const isToothbrush = (r.preset?.key ?? '').toLowerCase().includes('brush') || (r.preset?.label ?? '').toLowerCase().includes('brush') || r.name.toLowerCase().includes('brush')
-                    if (isToothbrush) {
-                      // Do NOT mark as completed yet; open choices (Book Guide will mark on completion)
+                    const keyName = (r.preset?.key ?? '') + ' ' + (r.preset?.label ?? '') + ' ' + r.name
+                    const lowered = keyName.toLowerCase()
+                    const isGuided = lowered.includes('brush') || lowered.includes('eat') || lowered.includes('bath') || lowered.includes('wash') || lowered.includes('school')
+                    if (isGuided) {
+                      // Guided routines require finishing Book Guide
                       setShowChoices(true)
                     } else {
-                      // Non-toothbrush routines: keep previous behavior (mark on tap)
                       if (!completedIds.includes(r.id)) {
                         setCompletedIds((prev) => [...prev, r.id])
                       }
@@ -430,7 +430,7 @@ const Home: React.FC = () => {
                 }}
                 className={`relative rounded-2xl ${upcoming && r.id !== activeId ? 'bg-white/70' : 'bg-white/90'} text-left text-slate-900 p-2.5 sm:p-3 md:p-4 shadow transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D7778] ${
                   r.id === activeId ? 'scale-[1.03] border-2 border-[#2D7778] shadow-xl' : 'hover:shadow-lg border border-transparent'
-                } ${isDone(r.id) ? 'opacity-90' : upcoming && r.id !== activeId ? '' : ''}`}
+                } ${isDone(r.id) ? 'opacity-90' : upcoming && r.id !== activeId ? '' : ''} ${routines.length === 1 ? 'w-full max-w-[260px]' : ''}`}
               >
                 <div className={`w-full aspect-square rounded-xl ${upcoming && r.id !== activeId ? 'bg-slate-300/50' : 'bg-white'} flex items-center justify-center overflow-hidden`}>
                   {r.preset?.url ? (

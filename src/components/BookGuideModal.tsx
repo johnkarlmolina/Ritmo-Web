@@ -39,8 +39,26 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
   const gifPutPaste = getPath(/Puttoothpaste\.(gif|png|jpe?g|svg)$/i)
   const gifBrush = getPath(/Brushing\.(gif|png|jpe?g|svg)$/i)
   const gifRinse = getPath(/Rinseoutwater\.(gif|png|jpe?g|svg)$/i)
+  // Eat preset step assets
+  const gifGettingFood = getPath(/getting-food\.(gif|png|jpe?g|svg)$/i)
+  const gifEatingFood = getPath(/eating-food\.(gif|png|jpe?g|svg)$/i)
+  const gifDoneEating = getPath(/done-eating\.(gif|png|jpe?g|svg)$/i)
+  // Bath preset step assets
+  const gifBathReady = getPath(/Bath-ready\.(gif|png|jpe?g|svg)$/i)
+  const gifBathCalling = getPath(/Bath-calling\.(gif|png|jpe?g|svg)$/i)
+  const gifBathBath = getPath(/Bath-bath\.(gif|png|jpe?g|svg)$/i)
+  const gifBathPutting = getPath(/Bath-putting(?:clothes)?\.(gif|png|jpe?g|svg)$/i)
+  // School preset step assets
+  const gifSchool1 = getPath(/GoingToSchool-1\.(gif|png|jpe?g|svg)$/i)
+  const gifSchool2 = getPath(/GoingToSchool-2\.(gif|png|jpe?g|svg)$/i)
+  const gifSchool3 = getPath(/GoingToSchool-3\.(gif|png|jpe?g|svg)$/i)
+  const gifSchool4 = getPath(/GoingToSchool-4\.(gif|png|jpe?g|svg)$/i)
 
-  const isBrush = (presetKey || '').toLowerCase().includes('brush') || (routineName || '').toLowerCase().includes('brush')
+  const lowerKeyName = (presetKey || '').toLowerCase() + ' ' + (routineName || '').toLowerCase()
+  const isBrush = lowerKeyName.includes('brush')
+  const isEat = lowerKeyName.includes('eat')
+  const isBath = lowerKeyName.includes('bath') || lowerKeyName.includes('wash')
+  const isSchool = lowerKeyName.includes('school')
 
   const steps: Step[] = useMemo(() => {
     if (isBrush) {
@@ -51,10 +69,33 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
         { img: gifRinse, title: 'Step 4', description: 'Rinse your mouth and toothbrush' },
       ]
     }
+    if (isEat) {
+      return [
+        { img: gifGettingFood, title: 'Step 1', description: 'Get your food ready on the table' },
+        { img: gifEatingFood, title: 'Step 2', description: 'Eat your meal slowly and enjoy' },
+        { img: gifDoneEating, title: 'Step 3', description: 'You are done eating! Clean up your area' },
+      ]
+    }
+    if (isBath) {
+      return [
+        { img: gifBathReady, title: 'Bath Ready', description: 'Prepare for bath time' },
+        { img: gifBathCalling, title: 'Bath Calling', description: 'Someone is calling — it’s bath time!' },
+        { img: gifBathBath, title: 'Bath Bath', description: 'Take a nice bath' },
+        { img: gifBathPutting, title: 'Bath Putting', description: 'Put on your clothes after bath' },
+      ]
+    }
+    if (isSchool) {
+      return [
+        { img: gifSchool1, title: 'Going to School 1', description: 'Get ready for school' },
+        { img: gifSchool2, title: 'Going to School 2', description: 'Prepare your things' },
+        { img: gifSchool3, title: 'Going to School 3', description: 'Head out on time' },
+        { img: gifSchool4, title: 'Going to School 4', description: 'Arrive at school safely' },
+      ]
+    }
     return [
-      { img: gifGetTBTP || gifBrush, title: 'Coming soon', description: 'Book Guide steps for this routine will be available soon.' }
+      { img: gifGettingFood || gifGetTBTP || gifBrush, title: 'Coming soon', description: 'Book Guide steps for this routine will be available soon.' }
     ]
-  }, [isBrush, gifGetTBTP, gifPutPaste, gifBrush, gifRinse, routineName])
+  }, [isBrush, isEat, isBath, isSchool, gifGetTBTP, gifPutPaste, gifBrush, gifRinse, gifGettingFood, gifEatingFood, gifDoneEating, gifBathReady, gifBathCalling, gifBathBath, gifBathPutting, gifSchool1, gifSchool2, gifSchool3, gifSchool4])
 
   const [idx, setIdx] = useState(0)
   const [childName, setChildName] = useState<string>('')
@@ -73,7 +114,7 @@ const BookGuideModal: React.FC<Props> = ({ open, onClose, routineName, onComplet
 
   const step = steps[idx]
   const isLast = idx === steps.length - 1
-  const title = isBrush ? 'Brush My Teeth' : (routineName || 'Book Guide')
+  const title = isBrush ? 'Brush My Teeth' : isEat ? "Let's Eat" : isBath ? 'Bath Time' : isSchool ? 'Going To School' : (routineName || 'Book Guide')
   const filledStars = Math.min(idx + 1, 3)
 
   return createPortal(
