@@ -3,10 +3,12 @@ import React, { useEffect, useState } from "react";
 import { supabase } from '../supabaseClient'
 // @ts-ignore - jsPDF types
 import jsPDF from 'jspdf';
+import HistoryModal from '../components/HistoryModal';
 
 const Progress: React.FC = () => {
   const [childNickname, setChildNickname] = useState("");
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   
   // Sample data - in a real app, this would come from props or state
   const weekRange = "October 20, 2025 – October 26, 2025";
@@ -43,119 +45,163 @@ const Progress: React.FC = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
+    const margin = 15;
     let yPos = margin;
 
     // Colors (RGB values for jsPDF)
     const tealColor: [number, number, number] = [45, 119, 120]; // #2D7778
-    const orangeColor: [number, number, number] = [239, 68, 68]; // #EF4444 (orange-500)
+    const lightTealColor: [number, number, number] = [210, 240, 240]; // Light teal background
+    const redColor: [number, number, number] = [239, 68, 68]; // Red for missed
+    const orangeColor = redColor; // Alias for compatibility
 
-    // Title
-    doc.setFontSize(24);
-    doc.setTextColor(tealColor[0], tealColor[1], tealColor[2]);
-    doc.setFont('helvetica', 'bold');
-    const titleText = 'Weekly Performance Summary';
-    const titleWidth = doc.getTextWidth(titleText);
-    doc.text(titleText, (pageWidth - titleWidth) / 2, yPos);
-    yPos += 15;
+    // First Card - Weekly Performance Summary
+    doc.setFillColor(245, 250, 250);
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 45, 5, 5, 'F');
+    doc.setDrawColor(200, 220, 220);
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 45, 5, 5, 'S');
 
-    // Child name and week
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`For: ${childNickname || '—'}`, margin, yPos);
     yPos += 8;
-    doc.text(`Week of: ${weekRange}`, margin, yPos);
-    yPos += 15;
-
-    // Summary stats
-    doc.setFontSize(14);
+    
+    // Title
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text('Summary', margin, yPos);
+    doc.text('Weekly Performance Summary', margin + 5, yPos);
+    yPos += 8;
+
+    // For and Week info
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(`For: ${childNickname || 'lorem malakas'}`, margin + 5, yPos);
+    yPos += 5;
+    doc.text(`Week of: ${weekRange}`, margin + 5, yPos);
     yPos += 10;
 
-    doc.setFontSize(11);
+    // Stats boxes in a row
+    const boxWidth = 35;
+    const boxHeight = 20;
+    const boxSpacing = 5;
+    const startX = margin + 10;
+
+    // Total Task box
+    doc.setFillColor(lightTealColor[0], lightTealColor[1], lightTealColor[2]);
+    doc.roundedRect(startX, yPos, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setDrawColor(tealColor[0], tealColor[1], tealColor[2]);
+    doc.roundedRect(startX, yPos, boxWidth, boxHeight, 3, 3, 'S');
+    
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
     doc.setFont('helvetica', 'normal');
-    const statsX = margin;
-    const statsY = yPos;
-    const statsSpacing = 50;
-
-    doc.setFillColor(tealColor[0], tealColor[1], tealColor[2]);
-    doc.roundedRect(statsX, statsY, 45, 25, 3, 3, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.text('Total Task', startX + boxWidth / 2, yPos + 7, { align: 'center' });
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total Tasks', statsX + 22.5, statsY + 8, { align: 'center' });
-    doc.text(String(totalTasks), statsX + 22.5, statsY + 18, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.text(String(totalTasks), startX + boxWidth / 2, yPos + 15, { align: 'center' });
 
-    doc.setFillColor(tealColor[0], tealColor[1], tealColor[2]);
-    doc.roundedRect(statsX + statsSpacing, statsY, 45, 25, 3, 3, 'F');
-    doc.text('Completed', statsX + statsSpacing + 22.5, statsY + 8, { align: 'center' });
-    doc.text(String(completedTasks), statsX + statsSpacing + 22.5, statsY + 18, { align: 'center' });
+    // Completed box
+    const completedX = startX + boxWidth + boxSpacing;
+    doc.setFillColor(lightTealColor[0], lightTealColor[1], lightTealColor[2]);
+    doc.roundedRect(completedX, yPos, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setDrawColor(tealColor[0], tealColor[1], tealColor[2]);
+    doc.roundedRect(completedX, yPos, boxWidth, boxHeight, 3, 3, 'S');
+    
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Completed', completedX + boxWidth / 2, yPos + 7, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(String(completedTasks), completedX + boxWidth / 2, yPos + 15, { align: 'center' });
 
-    doc.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
-    doc.roundedRect(statsX + statsSpacing * 2, statsY, 45, 25, 3, 3, 'F');
-    doc.text('Rate', statsX + statsSpacing * 2 + 22.5, statsY + 8, { align: 'center' });
-    doc.text(`${completionRate}%`, statsX + statsSpacing * 2 + 22.5, statsY + 18, { align: 'center' });
+    // Rate box
+    const rateX = completedX + boxWidth + boxSpacing;
+    doc.setFillColor(lightTealColor[0], lightTealColor[1], lightTealColor[2]);
+    doc.roundedRect(rateX, yPos, boxWidth, boxHeight, 3, 3, 'F');
+    doc.setDrawColor(tealColor[0], tealColor[1], tealColor[2]);
+    doc.roundedRect(rateX, yPos, boxWidth, boxHeight, 3, 3, 'S');
+    
+    doc.setFontSize(8);
+    doc.setTextColor(60, 60, 60);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Rate', rateX + boxWidth / 2, yPos + 7, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${completionRate}%`, rateX + boxWidth / 2, yPos + 15, { align: 'center' });
 
-    yPos += 35;
+    yPos += 30;
 
-    // Ritmo Tracker Table
+    // Second Card - Ritmo Tracker
+    doc.setFillColor(245, 250, 250);
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 120, 5, 5, 'F');
+    doc.setDrawColor(200, 220, 220);
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 120, 5, 5, 'S');
+
+    yPos += 8;
+    
+    // Title
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    doc.text('Ritmo Tracker', margin, yPos);
-    yPos += 10;
+    doc.text('Ritmo Tracker', margin + 5, yPos);
+    yPos += 8;
 
     // Table headers
-    const colWidths = [60, 15, 15, 15, 15, 15, 15, 15, 20];
+    const colWidths = [35, 9, 9, 9, 9, 9, 9, 9, 12];
     const headers = ['Task', 'M', 'T', 'W', 'Th', 'F', 'St', 'S', 'Done'];
-    let xPos = margin;
+    let xPos = margin + 5;
 
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 100, 100);
     headers.forEach((header, i) => {
-      doc.text(header, xPos + colWidths[i] / 2, yPos, { align: 'center' });
+      if (i === 0) {
+        doc.text(header, xPos, yPos);
+      } else {
+        doc.text(header, xPos + colWidths[i] / 2, yPos, { align: 'center' });
+      }
       xPos += colWidths[i];
     });
-    yPos += 8;
+    yPos += 6;
 
     // Table rows
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
     
     tasks.forEach((task) => {
-      // Check if we need a new page
-      if (yPos > pageHeight - 30) {
-        doc.addPage();
-        yPos = margin;
-      }
-
-      xPos = margin;
+      xPos = margin + 5;
       
       // Task name (left aligned)
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text(task, xPos + 2, yPos);
+      doc.setTextColor(0, 0, 0);
+      doc.text(task, xPos, yPos);
       xPos += colWidths[0];
 
-      // Day columns (simulate checkmarks - using ✓ for done, ✗ for missed)
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
+      // Day columns with colored squares
+      const squareSize = 4;
       for (let day = 1; day <= 7; day++) {
         const isDone = Math.random() > 0.5; // In real app, use actual data
+        const centerX = xPos + colWidths[day] / 2 - squareSize / 2;
+        const centerY = yPos - squareSize + 1;
+        
         if (isDone) {
-          doc.setTextColor(tealColor[0], tealColor[1], tealColor[2]);
+          doc.setFillColor(tealColor[0], tealColor[1], tealColor[2]);
         } else {
-          doc.setTextColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+          doc.setFillColor(redColor[0], redColor[1], redColor[2]);
         }
-        doc.text(isDone ? '✓' : '✗', xPos + colWidths[day] / 2, yPos, { align: 'center' });
+        doc.roundedRect(centerX, centerY, squareSize, squareSize, 1, 1, 'F');
         xPos += colWidths[day];
       }
 
-      // Done count (example: 3)
+      // Done count
+      doc.setFontSize(8);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      doc.text('3', xPos + colWidths[8] / 2, yPos, { align: 'center' });
+      const doneCount = Math.floor(Math.random() * 5) + 3; // Random 3-7
+      doc.text(String(doneCount), xPos + colWidths[8] / 2, yPos, { align: 'center' });
       
       yPos += 8;
     });
@@ -208,12 +254,25 @@ const Progress: React.FC = () => {
             <p className="text-lg font-semibold">
               For: <span className="font-normal">{childNickname || "—"}</span>
             </p>
-            <p className="mt-1 text-sm md:text-base">
-              Week of:{" "}
+            {/* Week of (clickable text + inline icon) */}
+            <button 
+              onClick={() => setShowHistory(true)}
+              className="mt-1 text-sm md:text-base flex items-center gap-2 hover:bg-gray-50 rounded px-2 py-1 -ml-2 transition-colors"
+            >
+              <span>Week of:</span>
               <span className="font-medium bg-gray-100 py-1 px-2 rounded">
                 {weekRange}
               </span>
-            </p>
+              <img 
+                src="/assets/images/history.png" 
+                alt="History" 
+                className="w-4 h-4 inline-block"
+                onError={(e) => {
+                  // Fallback if image doesn't exist
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </button>
           </div>
 
           <div className="flex justify-around md:justify-end gap-3 md:gap-6">
@@ -317,6 +376,13 @@ const Progress: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* History Modal */}
+      <HistoryModal
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        currentChildName={childNickname}
+      />
     </div>
   );
 };

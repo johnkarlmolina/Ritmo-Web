@@ -145,6 +145,11 @@ const App: React.FC = () => {
 
   // Redirect /reset-password to root and show Reset modal. Also auto-open if returning from a recovery link
   useEffect(() => {
+    // Redirect any non-root paths back to root (this is a SPA)
+    if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      window.history.replaceState({}, '', '/')
+    }
+
     if (window.location.pathname === '/reset-password') {
       // replace the URL so only http://localhost:5173 is shown
       window.history.replaceState({}, '', '/')
