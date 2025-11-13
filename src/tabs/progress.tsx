@@ -11,8 +11,55 @@ const Progress: React.FC = () => {
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   
+  // Selected week state
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date | null>(null);
+  const [selectedWeekEnd, setSelectedWeekEnd] = useState<Date | null>(null);
+  const [selectedWeekRange, setSelectedWeekRange] = useState<string | null>(null);
+  
+  // Calculate current week range (Monday to Sunday)
+  const getCurrentWeekRange = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Calculate days to subtract to get to Monday
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    // Get Monday of current week
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - daysToMonday);
+    monday.setHours(0, 0, 0, 0);
+    
+    // Get Sunday of current week
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    // Format dates
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    const formatDate = (date: Date) => {
+      return `${months[date.getMonth()]} ${String(date.getDate()).padStart(2, '0')}, ${date.getFullYear()}`;
+    };
+    
+    return {
+      startDate: monday,
+      endDate: sunday,
+      rangeText: `${formatDate(monday)} - ${formatDate(sunday)}`
+    };
+  };
+  
+  // Use selected week if available, otherwise use current week
+  const currentWeek = getCurrentWeekRange();
+  const weekRange = selectedWeekRange || currentWeek.rangeText;
+  // These dates can be used to fetch actual task data for the selected week from database
+  const weekStart = selectedWeekStart || currentWeek.startDate;
+  const weekEnd = selectedWeekEnd || currentWeek.endDate;
+  console.log('Current week range:', weekStart, 'to', weekEnd); // For debugging
+  
   // Sample data - in a real app, this would come from props or state
-  const weekRange = "October 20, 2025 – October 26, 2025";
   const totalTasks = 21;
   const completedTasks = 14;
   const completionRate = 66;
@@ -51,15 +98,15 @@ const Progress: React.FC = () => {
 
     // Colors (RGB values for jsPDF)
     const tealColor: [number, number, number] = [45, 119, 120]; // #2D7778
-    const lightTealColor: [number, number, number] = [210, 240, 240]; // Light teal background
+    const lightTealColor: [number, number, number] = [212, 229, 229]; // Light teal background
+    const greenColor: [number, number, number] = [34, 197, 94]; // Green for done
     const redColor: [number, number, number] = [239, 68, 68]; // Red for missed
-    const orangeColor = redColor; // Alias for compatibility
 
     // First Card - Weekly Performance Summary
     doc.setFillColor(245, 250, 250);
-    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 45, 5, 5, 'F');
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 50, 5, 5, 'F');
     doc.setDrawColor(200, 220, 220);
-    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 45, 5, 5, 'S');
+    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 50, 5, 5, 'S');
 
     yPos += 8;
     
@@ -74,9 +121,17 @@ const Progress: React.FC = () => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
-    doc.text(`For: ${childNickname || 'lorem malakas'}`, margin + 5, yPos);
-    yPos += 5;
-    doc.text(`Week of: ${weekRange}`, margin + 5, yPos);
+    doc.text('For: ', margin + 5, yPos);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${childNickname || 'Kid'}`, margin + 14, yPos);
+    yPos += 6;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Week of: ', margin + 5, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${weekRange}`, margin + 22, yPos);
     yPos += 10;
 
     // Stats boxes in a row
@@ -189,7 +244,7 @@ const Progress: React.FC = () => {
         const centerY = yPos - squareSize + 1;
         
         if (isDone) {
-          doc.setFillColor(tealColor[0], tealColor[1], tealColor[2]);
+          doc.setFillColor(greenColor[0], greenColor[1], greenColor[2]);
         } else {
           doc.setFillColor(redColor[0], redColor[1], redColor[2]);
         }
@@ -213,11 +268,11 @@ const Progress: React.FC = () => {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
     
-    doc.setFillColor(tealColor[0], tealColor[1], tealColor[2]);
+    doc.setFillColor(greenColor[0], greenColor[1], greenColor[2]);
     doc.rect(margin, yPos - 3, 4, 4, 'F');
     doc.text('Done', margin + 7, yPos);
     
-    doc.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+    doc.setFillColor(redColor[0], redColor[1], redColor[2]);
     doc.rect(margin + 25, yPos - 3, 4, 4, 'F');
     doc.text('Missed', margin + 32, yPos);
 
@@ -393,6 +448,11 @@ const Progress: React.FC = () => {
         open={showHistory}
         onClose={() => setShowHistory(false)}
         currentChildName={childNickname}
+        onSelectWeek={(startDate, endDate, weekRangeText) => {
+          setSelectedWeekStart(startDate);
+          setSelectedWeekEnd(endDate);
+          setSelectedWeekRange(weekRangeText);
+        }}
       />
     </div>
   );

@@ -1,49 +1,95 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+// @ts-ignore - local JS client without types shipped here
+import { supabase } from '../supabaseClient';
 
 type HistoryEntry = {
   id: string;
   weekRange: string;
+  startDate: Date;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
   currentChildName: string;
+  onSelectWeek?: (startDate: Date, endDate: Date, weekRange: string) => void;
 };
 
-const HistoryModal: React.FC<Props> = ({ open, onClose, currentChildName }) => {
+const HistoryModal: React.FC<Props> = ({ open, onClose, currentChildName, onSelectWeek }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showSort, setShowSort] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const headerRef = useRef<HTMLDivElement | null>(null);
-  // Sample history data - in real app this would come from database
-  const historyEntries: HistoryEntry[] = [
-    { id: '1', weekRange: 'October 20, 2025 – October 26, 2025' },
-    { id: '2', weekRange: 'October 13, 2025 – October 19, 2025' },
-    { id: '3', weekRange: 'October 06, 2025 – October 12, 2025' },
-    { id: '4', weekRange: 'September 29, 2025 – October 05, 2025' },
-    { id: '5', weekRange: 'September 22, 2025 – September 28, 2025' },
-    { id: '6', weekRange: 'September 15, 2025 – September 21, 2025' },
-    { id: '7', weekRange: 'September 08, 2025 – September 14, 2025' },
-    { id: '8', weekRange: 'September 01, 2025 – September 07, 2025' },
-  ];
 
-  // Parse the start date (left side of the range) into a sortable timestamp
-  const parseWeekStart = (range: string): number => {
-    // Split on en-dash or hyphen
-    const parts = range.split('–');
-    const left = (parts[0] ?? range).replace(/\u2013|\u2014/g, '-').split('-')[0].trim();
-    // Example left: "October 20, 2025"
-    const d = new Date(left);
-    const ts = d.getTime();
-    return Number.isFinite(ts) ? ts : 0;
-  };
+  // Generate weeks since account creation
+  useEffect(() => {
+    if (!open) return;
+    
+    const generateWeeks = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const accountCreatedAt = new Date(user.created_at);
+        const today = new Date();
+        
+        // Get Monday of account creation week
+        const accountDayOfWeek = accountCreatedAt.getDay();
+        const daysToMonday = accountDayOfWeek === 0 ? 6 : accountDayOfWeek - 1;
+        const firstMonday = new Date(accountCreatedAt);
+        firstMonday.setDate(accountCreatedAt.getDate() - daysToMonday);
+        firstMonday.setHours(0, 0, 0, 0);
+        
+        // Get Monday of current week
+        const todayDayOfWeek = today.getDay();
+        const todayDaysToMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - todayDaysToMonday);
+        currentMonday.setHours(0, 0, 0, 0);
+        
+        // Generate all weeks from first Monday to current week
+        const weeks: HistoryEntry[] = [];
+        const months = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        
+        const formatDate = (date: Date) => {
+          return `${months[date.getMonth()]} ${String(date.getDate()).padStart(2, '0')}, ${date.getFullYear()}`;
+        };
+        
+        let weekStart = new Date(firstMonday);
+        let weekId = 1;
+        
+        while (weekStart <= currentMonday) {
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          
+          weeks.push({
+            id: String(weekId++),
+            weekRange: `${formatDate(weekStart)} - ${formatDate(weekEnd)}`,
+            startDate: new Date(weekStart)
+          });
+          
+          // Move to next Monday
+          weekStart.setDate(weekStart.getDate() + 7);
+        }
+        
+        setHistoryEntries(weeks);
+      } catch (error) {
+        console.error('Error generating weeks:', error);
+      }
+    };
+    
+    generateWeeks();
+  }, [open]);
 
   const sortedEntries = useMemo(() => {
     const items = [...historyEntries];
     items.sort((a, b) => {
-      const aTs = parseWeekStart(a.weekRange);
-      const bTs = parseWeekStart(b.weekRange);
+      const aTs = a.startDate.getTime();
+      const bTs = b.startDate.getTime();
       return sortOrder === 'asc' ? aTs - bTs : bTs - aTs;
     });
     return items;
@@ -131,19 +177,30 @@ const HistoryModal: React.FC<Props> = ({ open, onClose, currentChildName }) => {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {sortedEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <p className="font-semibold text-sm text-gray-1000">
-                For: <span className="font-semibold text-gray-800">{currentChildName || '—'}</span>
-              </p>
-              <p className="font-semibold text-xs text-gray-1000 mt-1">
-                Week of: <span className="font-semibold text-gray-800">{entry.weekRange}</span>
-              </p>
-            </div>
-          ))}
+          {sortedEntries.map((entry) => {
+            const weekEnd = new Date(entry.startDate);
+            weekEnd.setDate(entry.startDate.getDate() + 6);
+            
+            return (
+              <div
+                key={entry.id}
+                className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  if (onSelectWeek) {
+                    onSelectWeek(entry.startDate, weekEnd, entry.weekRange);
+                    onClose();
+                  }
+                }}
+              >
+                <p className="font-semibold text-sm text-gray-1000">
+                  For: <span className="font-semibold text-gray-800">{currentChildName || '—'}</span>
+                </p>
+                <p className="font-semibold text-xs text-gray-1000 mt-1">
+                  Week of: <span className="font-semibold text-gray-800">{entry.weekRange}</span>
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>,

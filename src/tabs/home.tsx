@@ -3,6 +3,7 @@ import AddRoutineModal, { type NewRoutine } from "../components/AddRoutineModal"
 import RoutineDetailModal from "../components/RoutineDetailModal";
 import CompletionChoicesModal from "../components/CompletionChoicesModal";
 import BookGuideModal from "../components/BookGuideModal";
+import PinVerificationModal from "../components/PinVerificationModal";
 import { FiCheckCircle } from "react-icons/fi";
 // @ts-ignore - local JS client without types shipped here
 import { supabase } from '../supabaseClient'
@@ -45,6 +46,12 @@ const Home: React.FC = () => {
   const [showBookGuide, setShowBookGuide] = useState(false);
   const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
   const [justCompletedKey, setJustCompletedKey] = useState<string | null>(null);
+  
+  // Parental lock states
+  const [parentalPin, setParentalPin] = useState<string | null>(null);
+  const [isParentalLockEnabled, setIsParentalLockEnabled] = useState(false);
+  const [showPinVerification, setShowPinVerification] = useState(false);
+  const [pendingAddRoutine, setPendingAddRoutine] = useState(false);
 
   // Define a default routine shown when the list is empty
   const DEFAULT_ROUTINE: NewRoutine & { id: string } = {
@@ -121,6 +128,35 @@ const Home: React.FC = () => {
     load();
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Load parental lock settings
+  useEffect(() => {
+    const loadParentalLock = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user ?? null;
+        if (user) {
+          const meta = (user.user_metadata ?? {}) as any;
+          const pin = meta?.parental_pin ?? null;
+          const lockEnabled = meta?.parental_lock_enabled ?? false;
+          setParentalPin(pin);
+          setIsParentalLockEnabled(lockEnabled);
+        }
+      } catch (e) {
+        console.error('Error loading parental lock settings:', e);
+      }
+    };
+    loadParentalLock();
+
+    // Listen for USER_UPDATED event to refresh parental lock settings
+    const handleUserUpdated = () => {
+      loadParentalLock();
+    };
+    window.addEventListener('USER_UPDATED', handleUserUpdated);
+    return () => {
+      window.removeEventListener('USER_UPDATED', handleUserUpdated);
     };
   }, []);
 
@@ -377,7 +413,14 @@ const Home: React.FC = () => {
                 return
               }
             } catch {}
-            setOpen(true)
+            
+            // Check if parental lock is enabled and PIN is set
+            if (isParentalLockEnabled && parentalPin) {
+              setPendingAddRoutine(true);
+              setShowPinVerification(true);
+            } else {
+              setOpen(true);
+            }
           }}
           className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[#2D7778] text-white shadow-[0_10px_0_rgba(45,119,120,0.35)] flex items-center justify-center text-3xl sm:text-4xl"
           aria-label="Add Routine"
@@ -503,6 +546,24 @@ const Home: React.FC = () => {
           if (justCompletedId && !completedIds.includes(justCompletedId)) {
             setCompletedIds((prev) => [...prev, justCompletedId])
           }
+        }}
+      />
+
+      {/* PIN Verification Modal for Add Routine */}
+      <PinVerificationModal
+        open={showPinVerification}
+        onClose={() => {
+          setShowPinVerification(false);
+          setPendingAddRoutine(false);
+        }}
+        onVerify={(enteredPin: string) => {
+          const isCorrect = enteredPin === parentalPin;
+          if (isCorrect && pendingAddRoutine) {
+            setShowPinVerification(false);
+            setPendingAddRoutine(false);
+            setOpen(true);
+          }
+          return isCorrect;
         }}
       />
     </div>
