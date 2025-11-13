@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 // @ts-ignore - jsPDF types
 import jsPDF from 'jspdf';
 import HistoryModal from '../components/HistoryModal';
+import { showConfirm } from '../utils/alerts';
 
 const Progress: React.FC = () => {
   const [childNickname, setChildNickname] = useState("");
@@ -369,7 +370,17 @@ const Progress: React.FC = () => {
         {/* Save as PDF */}
         <div className="flex justify-center mt-8 md:mt-10">
           <button 
-            onClick={generatePDF}
+            onClick={async () => {
+              const result = await showConfirm(
+                'This will download your progress report as a PDF file.',
+                'Save Progress Report?',
+                'Yes, Save PDF',
+                'Cancel'
+              );
+              if (result.isConfirmed) {
+                generatePDF();
+              }
+            }}
             className="bg-[#2D7778] hover:bg-teal-600 text-white px-6 py-2 md:px-8 md:py-3 rounded-xl shadow-md text-sm md:text-base transition"
           >
             Save as PDF

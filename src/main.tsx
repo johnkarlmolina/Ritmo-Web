@@ -9,9 +9,11 @@ import Progress from './tabs/progress'
 import Setting from './tabs/setting'
 import Modal from './components/Modal'
 import GreetingOverlay from './components/GreetingOverlay'
+import PinVerificationModal from './components/PinVerificationModal'
 import LoginForm from './auth/LoginForm'
 import SignupForm from './auth/Signup'
 import ForgotPassword from './auth/ForgotPassword'
+import { showError } from './utils/alerts'
 // icons
 import { FiHome, FiBarChart2, FiSettings, FiMenu, FiX } from 'react-icons/fi'
 import { FaPlayCircle } from 'react-icons/fa'
@@ -49,6 +51,10 @@ const App: React.FC = () => {
   const [showMobileNav, setShowMobileNav] = useState(false)
   const [hasLeftHome, setHasLeftHome] = useState(false)
   const [isWelcomeBackGreeting, setIsWelcomeBackGreeting] = useState(false)
+  const [showPinVerification, setShowPinVerification] = useState(false)
+  const [parentalPin, setParentalPin] = useState<string | null>(null)
+  const [isParentalLockEnabled, setIsParentalLockEnabled] = useState(false)
+  const [requestedTab, setRequestedTab] = useState<string | null>(null)
 
   const loadChildName = async () => {
     try {
@@ -63,6 +69,11 @@ const App: React.FC = () => {
         if (!nickname) {
           setShowChildName(true)
         }
+        // Load parental lock settings
+        const pin = meta?.parental_pin ?? null
+        const lockEnabled = meta?.parental_lock_enabled ?? false
+        setParentalPin(pin)
+        setIsParentalLockEnabled(lockEnabled)
         // No greeting on initial load - only when returning to home tab
       }
     } catch (e) {
@@ -97,6 +108,10 @@ const App: React.FC = () => {
         setUserId(uid)
         if (uid) {
           loadChildName()
+          // Reload parental lock settings when user data is updated
+          if (event === 'USER_UPDATED') {
+            loadChildName()
+          }
           // Only greet on actual sign-in, not on page refresh (INITIAL_SESSION)
           if (event === 'SIGNED_IN' && !hasGreetedLogin) {
             supabase.auth.getUser().then((res: any) => {
@@ -231,6 +246,13 @@ const App: React.FC = () => {
                       setShowLogin(true)
                       return
                     }
+                    // Check for parental lock on progress and settings
+                    const needsPin = t.id === 'progress' || t.id === 'setting'
+                    if (needsPin && isParentalLockEnabled && parentalPin) {
+                      setRequestedTab(t.id)
+                      setShowPinVerification(true)
+                      return
+                    }
                     setActive(t.id)
                   }}
                   className={`relative p-2 rounded-md transition-colors hover:bg-white/5 ${
@@ -302,6 +324,14 @@ const App: React.FC = () => {
                       if (needsAuth && !isAuthed) {
                         setPendingTab(t.id)
                         setShowLogin(true)
+                        setShowMobileNav(false)
+                        return
+                      }
+                      // Check for parental lock on progress and settings
+                      const needsPin = t.id === 'progress' || t.id === 'setting'
+                      if (needsPin && isParentalLockEnabled && parentalPin) {
+                        setRequestedTab(t.id)
+                        setShowPinVerification(true)
                         setShowMobileNav(false)
                         return
                       }
@@ -419,7 +449,7 @@ const App: React.FC = () => {
                   })
                   if (error) {
                     console.error('Error updating child name:', error)
-                    window.alert('Failed to save nickname. Please try again.')
+                    showError('Failed to save nickname. Please try again.')
                     return
                   }
                   setChildName(name)
@@ -428,7 +458,7 @@ const App: React.FC = () => {
                   setHasGreetedLogin(true)
                 } catch (err) {
                   console.error('Unexpected error updating child name:', err)
-                  window.alert('Failed to save nickname. Please try again.')
+                  showError('Failed to save nickname. Please try again.')
                 }
               }}
               className="space-y-5"
@@ -461,6 +491,27 @@ const App: React.FC = () => {
             name={childName} 
             onClose={() => setShowGreeting(false)} 
             isWelcomeBack={isWelcomeBackGreeting}
+          />
+
+          {/* PIN Verification Modal for Protected Pages */}
+          <PinVerificationModal
+            open={showPinVerification}
+            onClose={() => {
+              setShowPinVerification(false)
+              setRequestedTab(null)
+            }}
+            onVerify={(enteredPin) => {
+              if (enteredPin === parentalPin) {
+                setShowPinVerification(false)
+                if (requestedTab) {
+                  setActive(requestedTab)
+                  setRequestedTab(null)
+                }
+                return true
+              }
+              return false
+            }}
+            title={requestedTab === 'progress' ? 'Enter PIN to access Progress' : 'Enter PIN to access Settings'}
           />
     </div>
   )

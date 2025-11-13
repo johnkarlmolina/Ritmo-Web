@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { FiChevronRight } from 'react-icons/fi'
 import RoutinePresetModal, { type Preset } from './RoutinePresetModal.tsx'
 import RingtoneModal, { type Ringtone } from './RingtoneModal.tsx'
+import { showWarning } from '../utils/alerts'
 
 type Props = {
   open: boolean
@@ -69,7 +70,7 @@ const AddRoutineModal: React.FC<Props> = ({ open, onClose, onDone }) => {
     if (missing.ringtone) missingLabels.push('Ringtone selection')
 
     if (missingLabels.length > 0) {
-      window.alert('Please fill up: ' + missingLabels.join(', '))
+      showWarning('Please fill up: ' + missingLabels.join(', '))
       return
     }
     const payload: NewRoutine = {
