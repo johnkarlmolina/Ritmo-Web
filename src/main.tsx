@@ -511,7 +511,6 @@ const App: React.FC = () => {
               }
               return false
             }}
-            title={requestedTab === 'progress' ? 'Enter PIN to access Progress' : 'Enter PIN to access Settings'}
           />
     </div>
   )
