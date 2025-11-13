@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { showWarning } from '../utils/alerts';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSave: (pin: string) => void;
+  onVerify: (pin: string) => boolean; // Returns true if PIN is correct
+  title?: string;
 };
 
-const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
+const PinVerificationModal: React.FC<Props> = ({ open, onClose, onVerify, title = "Enter PIN to access" }) => {
   const [pin, setPin] = useState(['', '', '', '']);
+  const [error, setError] = useState('');
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -30,6 +31,10 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
       inputRefs[0].current.focus();
     }
     
+    // Clear PIN and error when modal opens
+    setPin(['', '', '', '']);
+    setError('');
+    
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
@@ -43,6 +48,7 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
     const newPin = [...pin];
     newPin[index] = value;
     setPin(newPin);
+    setError(''); // Clear error on input
 
     // Auto-focus next input
     if (value && index < 3) {
@@ -76,19 +82,24 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
     inputRefs[focusIndex].current?.focus();
   };
 
-  const handleSave = () => {
+  const handleVerify = () => {
     const pinCode = pin.join('');
     if (pinCode.length !== 4 || pin.some(digit => digit === '')) {
-      showWarning('Please enter all 4 digits of your PIN code');
+      setError('Please enter all 4 digits');
       return;
     }
-    onSave(pinCode);
-    // Reset PIN
-    setPin(['', '', '', '']);
+    
+    const isCorrect = onVerify(pinCode);
+    if (!isCorrect) {
+      setError('Incorrect PIN. Please try again.');
+      setPin(['', '', '', '']);
+      inputRefs[0].current?.focus();
+    }
   };
 
   const handleCancel = () => {
     setPin(['', '', '', '']);
+    setError('');
     onClose();
   };
 
@@ -102,12 +113,15 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
       {/* Modal */}
       <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8">
         {/* Title */}
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
-          Set a 4-digit PIN code
+        <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
+          {title}
         </h2>
+        <p className="text-sm text-gray-600 text-center mb-8">
+          Parental lock is enabled
+        </p>
 
         {/* PIN Input Boxes */}
-        <div className="flex justify-center gap-3 mb-8">
+        <div className="flex justify-center gap-3 mb-4">
           {pin.map((digit, index) => (
             <input
               key={index}
@@ -119,19 +133,28 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-16 h-16 sm:w-20 sm:h-20 text-center text-2xl font-bold border-2 border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#2D7778] focus:border-[#2D7778] bg-gray-100 transition"
+              className={`w-16 h-16 sm:w-20 sm:h-20 text-center text-2xl font-bold border-2 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#2D7778] focus:border-[#2D7778] bg-gray-100 transition ${
+                error ? 'border-red-500' : 'border-gray-300'
+              }`}
               aria-label={`PIN digit ${index + 1}`}
             />
           ))}
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <p className="text-red-600 text-sm text-center mb-6 font-medium">
+            {error}
+          </p>
+        )}
+
         {/* Buttons */}
         <div className="space-y-3">
           <button
-            onClick={handleSave}
+            onClick={handleVerify}
             className="w-full py-3 px-6 rounded-full bg-[#2D7778] hover:bg-teal-700 text-white font-semibold shadow-md transition"
           >
-            Save Pin
+            Verify
           </button>
           <button
             onClick={handleCancel}
@@ -146,4 +169,4 @@ const PinCodeModal: React.FC<Props> = ({ open, onClose, onSave }) => {
   );
 };
 
-export default PinCodeModal;
+export default PinVerificationModal;

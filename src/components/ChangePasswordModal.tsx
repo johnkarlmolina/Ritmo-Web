@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { showWarning } from '../utils/alerts';
 
 type Props = {
   open: boolean;
@@ -28,17 +29,17 @@ const ChangePasswordModal: React.FC<Props> = ({ open, onClose, onSave }) => {
 
   const handleSave = () => {
     if (!newPassword.trim()) {
-      alert('Please enter a new password');
+      showWarning('Please enter a new password');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
+      showWarning('Passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters long');
+      showWarning('Password must be at least 6 characters long');
       return;
     }
 

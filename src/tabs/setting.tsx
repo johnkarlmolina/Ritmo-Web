@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from '../supabaseClient'
 import PinCodeModal from '../components/PinCodeModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import { showError, showSuccess } from '../utils/alerts';
 
 const Setting: React.FC = () => {
   const [childNickname, setChildNickname] = useState("");
@@ -30,6 +31,14 @@ const Setting: React.FC = () => {
         setEmail(user.email || "");
         const meta = (user.user_metadata ?? {}) as any;
         setChildNickname(meta?.child_name ?? "");
+        
+        // Load PIN and lock status from user metadata
+        const storedPin = meta?.parental_pin ?? null;
+        const lockEnabled = meta?.parental_lock_enabled ?? false;
+        if (storedPin && lockEnabled) {
+          setSavedPin(storedPin);
+          setIsLocked(true);
+        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -59,7 +68,7 @@ const Setting: React.FC = () => {
       // Save the nickname
       const newNickname = nicknameInput.trim();
       if (!newNickname) {
-        alert('Nickname cannot be empty');
+        showError('Nickname cannot be empty');
         return;
       }
       
@@ -70,7 +79,7 @@ const Setting: React.FC = () => {
         
         if (error) {
           console.error('Error updating nickname:', error);
-          alert('Failed to update nickname. Please try again.');
+          showError('Failed to update nickname. Please try again.');
           return;
         }
         
@@ -78,7 +87,7 @@ const Setting: React.FC = () => {
         setIsEditingNickname(false);
       } catch (err) {
         console.error('Unexpected error updating nickname:', err);
-        alert('Failed to update nickname. Please try again.');
+        showError('Failed to update nickname. Please try again.');
       }
     } else {
       // Enter edit mode
@@ -222,15 +231,30 @@ const Setting: React.FC = () => {
                   type="checkbox"
                   className="sr-only peer"
                   checked={isLocked}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const newValue = e.target.checked;
                     if (newValue) {
                       // Show PIN modal when turning ON
                       setShowPinModal(true);
                     } else {
-                      // Turn OFF without PIN
-                      setIsLocked(false);
-                      setSavedPin(null);
+                      // Turn OFF and clear lock status from database
+                      try {
+                        const { error } = await supabase.auth.updateUser({
+                          data: { parental_lock_enabled: false }
+                        });
+
+                        if (error) {
+                          console.error('Error disabling parental lock:', error);
+                          showError('Failed to disable parental lock. Please try again.');
+                          return;
+                        }
+
+                        setIsLocked(false);
+                        setSavedPin(null);
+                      } catch (err) {
+                        console.error('Unexpected error disabling parental lock:', err);
+                        showError('Failed to disable parental lock. Please try again.');
+                      }
                     }
                   }}
                 />
@@ -290,11 +314,29 @@ const Setting: React.FC = () => {
           setShowPinModal(false);
           // Don't change isLocked state if user cancels
         }}
-        onSave={(pin) => {
-          setSavedPin(pin);
-          setIsLocked(true);
-          setShowPinModal(false);
-          console.log('PIN saved:', pin); // In production, save to secure storage
+        onSave={async (pin) => {
+          try {
+            // Save PIN and enable parental lock in Supabase user metadata
+            const { error } = await supabase.auth.updateUser({
+              data: { 
+                parental_pin: pin,
+                parental_lock_enabled: true
+              }
+            });
+
+            if (error) {
+              console.error('Error saving PIN:', error);
+              showError('Failed to save PIN. Please try again.');
+              return;
+            }
+
+            setSavedPin(pin);
+            setIsLocked(true);
+            setShowPinModal(false);
+          } catch (err) {
+            console.error('Unexpected error saving PIN:', err);
+            showError('Failed to save PIN. Please try again.');
+          }
         }}
       />
 
@@ -310,15 +352,15 @@ const Setting: React.FC = () => {
 
             if (error) {
               console.error('Error updating password:', error);
-              alert('Failed to update password. Please try again.');
+              showError('Failed to update password. Please try again.');
               return;
             }
 
-            alert('Password updated successfully!');
+            showSuccess('Password updated successfully!');
             setShowPasswordModal(false);
           } catch (err) {
             console.error('Unexpected error updating password:', err);
-            alert('Failed to update password. Please try again.');
+            showError('Failed to update password. Please try again.');
           }
         }}
       />
